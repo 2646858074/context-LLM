@@ -244,13 +244,13 @@ Supported targets:
 The project publishes a multi-architecture container image to GitHub Packages:
 
 ```text
-ghcr.io/recaent/context-llm
+ghcr.io/RecaEENT/context-llm
 ```
 
 Pull the current version:
 
 ```sh
-docker pull ghcr.io/recaent/context-llm:1.1.0
+docker pull ghcr.io/RecaEENT/context-llm:1.1.0
 ```
 
 Run it with a prepared configuration:
@@ -258,7 +258,7 @@ Run it with a prepared configuration:
 ```sh
 docker run --rm \
   -v "$PWD/config.txt:/app/config.txt:ro" \
-  ghcr.io/recaent/context-llm:1.1.0
+  ghcr.io/RecaEENT/context-llm:1.1.0
 ```
 
 Pushing a `v*` tag automatically builds `linux/amd64` and `linux/arm64` images and publishes both `v*` and `latest` tags.
