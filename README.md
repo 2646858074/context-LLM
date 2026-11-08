@@ -4,25 +4,24 @@
 
 一个无第三方 Go 依赖的长上下文测试工具，用于评估 OpenAI 兼容接口。
 
-当前版本：`1.2.1`
+当前版本：`1.2.5`
 
 主要能力：
 
 - 按 K/M 档位测试上下文容量
 - 精确检索、多跳推理、规则冲突和对抗干扰题型
 - 普通模式与增强自动测试
-- 自动 token 校准、输出余量扩展和错误重试
+- 自动 token 校准、输出余量扩展、错误重试和断点续跑
 - 分题型评分、重复测试统计和完整响应元数据
-- trial 级断点续跑、并发执行和全局请求限流
+- 可配置二分精度、并发执行和全局请求限流
 - 本地 Markdown 预览、自动打开浏览器和 5 分钟超时
 - 跨 macOS、Windows、Linux 的 x64/ARM64 构建
 
 ## 快速开始
 
-首次运行时，如果可执行文件旁没有 `config.txt`，程序会生成默认配置并退出。编辑配置后再次运行。
+首次运行时，如果可执行文件同目录没有 `config.txt`，程序会生成默认配置并退出。编辑配置后再次运行。
 
 ```sh
-cd context-LLM
 ./build.sh
 ```
 
@@ -84,7 +83,7 @@ go run . --config ./config.txt
 
 ## 配置说明
 
-配置文件使用中文注释：独立行以 `#` 开头，行尾 `#` 后的内容也会被忽略。
+配置文件使用中文注释：独立行以 `#` 开头，行尾 `#` 后的内容也会被忽略。下表列出程序首次生成时的默认值；已有配置中的自定义值不会被覆盖。
 
 ### 服务商连接
 
@@ -93,7 +92,7 @@ go run . --config ./config.txt
 | `base_url` | `https://api.openai.com/v1` | OpenAI 兼容接口地址 |
 | `model` | `GPT6.1-Astra` | 被测模型 ID |
 | `api_key` | 占位密钥 | 正式运行前必须替换 |
-| `api_mode` | `chat-completions` | 可选 `chat-completions` 或 `responses` |
+| `api_mode` | `chat-completions` | 请求格式，可选 `chat-completions` 或 `responses` |
 | `reasoning_effort` | `default` | `default` 不发送；可选 `none/minimal/low/medium/high/xhigh/max` |
 | `reasoning_summary` | `default` | 仅 Responses；`default` 不发送，可选 `auto/concise/detailed` |
 
@@ -105,7 +104,7 @@ go run . --config ./config.txt
 | `chars_per_token` | `6.25` | 初始输入估算，后续按实际用量校准 |
 | `max_output_tokens` | `2500` | 最小输出预算，程序会按锚点数自动扩展 |
 | `timeout_seconds` | `900` | 单次请求超时时间 |
-| `transport_retries` | `1` | 可恢复错误的额外重试次数 |
+| `transport_retries` | `1` | 网络、408、普通 429、可恢复 5xx 的额外重试次数 |
 
 `tiers` 示例：
 
@@ -120,18 +119,20 @@ tiers = 20K, 1.1M, 2M
 | 配置 | 默认值 | 说明 |
 |---|---|---|
 | `auto_calibrate` | `true` | 根据实际输入 token 校准后续档位 |
-| `enhanced_auto_test` | `false` | 每档三次、中位数校准、自动二分 |
-| `binary_precision_tokens` | `10000` | 增强模式二分搜索精度，单位 token |
-| `structured_output` | `true` | 优先发送 JSON 结构约束 |
-| `parallel_tests` | `false` | 并行执行增强模式的同档三次测试 |
+| `enhanced_auto_test` | `false` | 开启后每档使用新题测试三次，并自动二分 |
+| `binary_precision_tokens` | `10000` | 增强模式二分搜索精度，单位 token；越小越精确 |
+| `structured_output` | `true` | 优先发送 JSON 结构约束，不支持时自动降级 |
+| `parallel_tests` | `false` | 仅增强模式生效；并行执行同档三次测试 |
 | `request_interval_ms` | `0` | 全局请求起始间隔；0 表示不限速 |
+
+普通模式保留单次测试和实际 token 校准；增强模式固定每档三次，每次生成新的题目，并以三次输入 token 的中位数作为校准依据。
 
 ### 题目与评分
 
 | 配置 | 默认值 | 说明 |
 |---|---|---|
 | `anchor_count` | `13` | 总题目数，范围 13-50 |
-| `evidence_tolerance` | `0` | 每种题型允许的证据错误数，建议不超过 2 |
+| `evidence_tolerance` | `0` | 宽容的证据错误数；验证答案后允许缺少证据，弱模型建议不超过 2 |
 | `test_modes` | 四类全开 | 逗号分隔的题型开关 |
 
 可用题型：
@@ -163,7 +164,7 @@ tiers = 20K, 1.1M, 2M
 
 ### 增强模式
 
-将 `enhanced_auto_test` 设为 `true` 后：
+将 `enhanced_auto_test` 设为 `true` 后，每次运行都会重新生成题库：
 
 1. 每档固定测试三次，每次生成新的随机题库。
 2. 使用三次输入 token 的中位数校准。
@@ -172,7 +173,7 @@ tiers = 20K, 1.1M, 2M
 
 ### 请求可靠性
 
-- 网络中断、HTTP `408`、普通 `429` 和可恢复 `5xx` 会指数退避重试。
+- `transport_retries` 控制网络中断、HTTP `408`、普通 `429` 和可恢复 `5xx` 的额外重试次数。
 - `model_cooldown` 使用更长的初始等待和最高 5 分钟退避；普通限流最高 30 秒。
 - 支持 `Retry-After`，冷却场景可遵守更长的等待时间。
 - 单纯 `usage_limit_reached` 不会盲目重试，直接保留错误报告。
@@ -198,6 +199,9 @@ Estimated usage for 200000: input 189.5K, output 2.5K, total 192.0K
 - 每种题型的答案与证据成绩
 - 实际返回模型、finish reason、cached/reasoning tokens
 - 结构化输出是否降级，以及 JSON 是否自动修复
+- 下次运行建议的 `chars_per_token`（增强模式取三次校准值的中位数）
+
+将报告中的建议值写回配置中的 `chars_per_token`，可以减少下一档位的输入 token 估算偏差。
 
 ## 结果文件
 
@@ -234,7 +238,7 @@ runs/run_日期_时间/
 ./<binary> --resume runs/run_20261108_120000
 ```
 
-恢复时会校验配置指纹。每次 trial 完成后都会更新 checkpoint；恢复时会复用已完成的单次测试，只补跑尚未完成的 trial。档位、探测阶段和二分边界也会保留。
+恢复时会校验配置指纹。每次 trial 完成后都会更新 checkpoint；恢复时会复用已完成的单次测试，只补跑尚未完成的 trial。档位、探测阶段、二分边界、已完成尝试次数和响应元数据也会保留。
 
 ## 常规验证
 
@@ -303,7 +307,7 @@ ghcr.io/recaeent/context-llm
 拉取当前版本：
 
 ```sh
-docker pull ghcr.io/recaeent/context-llm:1.2.1
+docker pull ghcr.io/recaeent/context-llm:1.2.5
 ```
 
 使用已准备好的配置运行：
@@ -311,7 +315,7 @@ docker pull ghcr.io/recaeent/context-llm:1.2.1
 ```sh
 docker run --rm \
   -v "$PWD/config.txt:/app/config.txt:ro" \
-  ghcr.io/recaeent/context-llm:1.2.1
+  ghcr.io/recaeent/context-llm:1.2.5
 ```
 
 推送 `v*` 标签后，workflow 会自动构建 `linux/amd64` 和 `linux/arm64` 镜像，并发布 `v*` 与 `latest` 标签。
