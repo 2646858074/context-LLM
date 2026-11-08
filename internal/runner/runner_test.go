@@ -107,6 +107,19 @@ func TestRetryDelayUsesBackoffAndRetryAfter(t *testing.T) {
 	}
 }
 
+func TestResumeTrialReusesExistingResult(t *testing.T) {
+	runner := New(config.Config{}, t.TempDir(), io.Discard)
+	existing := Trial{Tier: 200000, Label: "primary_1", Seed: 42}
+	state := Checkpoint{Trials: []Trial{existing}}
+	resumed, err := runner.resumeTrial(&state, 200000, "primary_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resumed.Seed != existing.Seed || len(state.Trials) != 1 {
+		t.Fatalf("existing trial was not reused: %#v", resumed)
+	}
+}
+
 func TestCheckpointRoundTripAndConfigGuard(t *testing.T) {
 	cfg := config.Config{
 		BaseURL: "https://example.test/v1",

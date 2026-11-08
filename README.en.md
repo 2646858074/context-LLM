@@ -232,7 +232,7 @@ Resume a specific run directory:
 ./<binary> --resume runs/run_20261108_120000
 ```
 
-Resume validates the configuration fingerprint. If interruption occurred inside a tier, that tier is rerun; completed tiers, probe state, and binary-search bounds are preserved.
+Resume validates the configuration fingerprint. The checkpoint updates after every trial; completed trials are reused and only missing trials are rerun. Tier progress, probe state, and binary-search bounds are also preserved.
 
 ## Verification
 
