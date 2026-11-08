@@ -442,6 +442,7 @@ func (runner *Runner) runTrial(tier int, label string) (Trial, error) {
 			result.Raw["_max_output_tokens"] = outputLimit
 			result.Raw["_retryable"] = result.Retryable
 			result.Raw["_retry_after_ms"] = result.RetryAfter.Milliseconds()
+			result.Raw["_retry_class"] = result.RetryClass
 			result.Raw["_structured_output"] = result.StructuredOutput
 			result.Raw["_structured_output_fallback"] = result.StructuredOutputFallback
 			suffix := ""
@@ -471,8 +472,8 @@ func (runner *Runner) runTrial(tier int, label string) (Trial, error) {
 		if !result.Retryable || attempts >= runner.Config.TransportRetries+1 {
 			break
 		}
-		delay := retryDelay(attempts, result.RetryAfter)
-		fmt.Fprintf(runner.Out, "Retrying after %s (attempt %d/%d) …\n", delay, attempts+1, runner.Config.TransportRetries+1)
+		delay := retryDelay(attempts, result)
+		fmt.Fprintf(runner.Out, "Retrying %s after %s (attempt %d/%d) …\n", result.RetryClass, delay, attempts+1, runner.Config.TransportRetries+1)
 		time.Sleep(delay)
 	}
 
@@ -569,14 +570,21 @@ func CalibrateFromTrials(tier int, chars float64, trials []Trial) *Calibration {
 	return Calibrate(tier, chars, &median)
 }
 
-func retryDelay(attempt int, retryAfter time.Duration) time.Duration {
-	const base = 500 * time.Millisecond
-	const maximum = 30 * time.Second
-	if retryAfter > 0 {
-		if retryAfter > maximum {
+func retryDelay(attempt int, result provider.Result) time.Duration {
+	base := 500 * time.Millisecond
+	maximum := 30 * time.Second
+	switch result.RetryClass {
+	case "model_cooldown":
+		base = 15 * time.Second
+		maximum = 5 * time.Minute
+	case "rate_limit", "server_error", "timeout":
+		base = time.Second
+	}
+	if result.RetryAfter > 0 {
+		if result.RetryAfter > maximum {
 			return maximum
 		}
-		return retryAfter
+		return result.RetryAfter
 	}
 	delay := base
 	for index := 1; index < attempt && delay < maximum; index++ {

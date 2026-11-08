@@ -170,8 +170,10 @@ Set `enhanced_auto_test = true` to enable:
 
 ### Request Reliability
 
-- Network failures, HTTP `408`, `429`, and recoverable `5xx` responses use exponential backoff.
-- `Retry-After` is honored, with a maximum single wait of 30 seconds.
+- Network failures, HTTP `408`, ordinary `429`, and recoverable `5xx` responses use exponential backoff.
+- `model_cooldown` uses a longer initial wait and up to five minutes of backoff; ordinary rate limits are capped at 30 seconds.
+- `Retry-After` is honored, including longer cooldown delays.
+- A standalone `usage_limit_reached` error stops immediately instead of retrying blindly.
 - Context-limit, authentication, and ordinary parameter errors are not retried.
 - Unsupported structured-output fields fall back automatically and are recorded.
 - JSON output can be extracted and repaired for code fences, trailing commas, and missing delimiters.

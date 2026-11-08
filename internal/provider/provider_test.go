@@ -41,8 +41,19 @@ func TestRetryableStatusClassification(t *testing.T) {
 
 func TestHTTPErrorHonorsRetryAfter(t *testing.T) {
 	result := httpErrorResult(http.StatusTooManyRequests, `{"error":{"code":"rate_limited"}}`, "2")
-	if result.HTTPStatus != http.StatusTooManyRequests || !result.Retryable || result.RetryAfter != 2*time.Second {
+	if result.HTTPStatus != http.StatusTooManyRequests || !result.Retryable || result.RetryAfter != 2*time.Second || result.RetryClass != "rate_limit" {
 		t.Fatalf("unexpected retry metadata: %#v", result)
+	}
+}
+
+func TestHTTPErrorClassifiesCooldownAndUsageLimit(t *testing.T) {
+	cooldown := httpErrorResult(http.StatusTooManyRequests, `{"error":{"code":"model_cooldown","message":"cooling down"}}`, "")
+	if !cooldown.Retryable || cooldown.RetryClass != "model_cooldown" {
+		t.Fatalf("cooldown was not classified correctly: %#v", cooldown)
+	}
+	usage := httpErrorResult(http.StatusTooManyRequests, `{"error":{"code":"usage_limit_reached","message":"usage limit reached"}}`, "")
+	if usage.Retryable || usage.RetryClass != "usage_limit" {
+		t.Fatalf("usage limit was not classified correctly: %#v", usage)
 	}
 }
 

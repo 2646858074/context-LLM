@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"context-LLM/internal/config"
+	"context-LLM/internal/provider"
 )
 
 func TestCalibration(t *testing.T) {
@@ -83,17 +84,26 @@ func TestRequestThrottleHonorsInterval(t *testing.T) {
 }
 
 func TestRetryDelayUsesBackoffAndRetryAfter(t *testing.T) {
-	if got := retryDelay(1, 0); got != 500*time.Millisecond {
+	if got := retryDelay(1, provider.Result{}); got != 500*time.Millisecond {
 		t.Fatalf("unexpected first delay: %s", got)
 	}
-	if got := retryDelay(3, 0); got != 2*time.Second {
+	if got := retryDelay(3, provider.Result{}); got != 2*time.Second {
 		t.Fatalf("unexpected third delay: %s", got)
 	}
-	if got := retryDelay(1, 4*time.Second); got != 4*time.Second {
+	if got := retryDelay(1, provider.Result{RetryAfter: 4 * time.Second}); got != 4*time.Second {
 		t.Fatalf("Retry-After was not honored: %s", got)
 	}
-	if got := retryDelay(1, time.Minute); got != 30*time.Second {
+	if got := retryDelay(1, provider.Result{RetryAfter: time.Minute}); got != 30*time.Second {
 		t.Fatalf("Retry-After was not capped: %s", got)
+	}
+	if got := retryDelay(1, provider.Result{RetryClass: "rate_limit"}); got != time.Second {
+		t.Fatalf("rate-limit delay was not increased: %s", got)
+	}
+	if got := retryDelay(1, provider.Result{RetryClass: "model_cooldown"}); got != 15*time.Second {
+		t.Fatalf("model-cooldown delay was not increased: %s", got)
+	}
+	if got := retryDelay(1, provider.Result{RetryClass: "model_cooldown", RetryAfter: time.Minute}); got != time.Minute {
+		t.Fatalf("model-cooldown Retry-After was not honored: %s", got)
 	}
 }
 
