@@ -1,6 +1,0 @@
-*
-!Dockerfile
-!dist/
-dist/*
-!dist/context_llm_linux_amd64
-!dist/context_llm_linux_arm64
