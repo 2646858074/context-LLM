@@ -1,302 +1,71 @@
-# context-LLM
+# Context-LLM · Benchmark Viewer
 
-[English](README.en.md) | 中文
+在浏览器里打开一份 `checkpoint.json`，把 context-LLM 的长上下文测试结果读成一份可视化报告。
+纯静态、离线、无第三方依赖：HTML + CSS + 原生 JS，双击 `index.html` 就能用。
 
-一个无第三方 Go 依赖的长上下文测试工具，用于评估 OpenAI 兼容接口。
+Open a local `checkpoint.json` from
+[context-LLM](https://github.com/RecaEENT/context-LLM) and read the run as a visual report.
+Static, offline, dependency-free — just open `index.html`.
 
-当前版本：`1.1.0`
+---
 
-主要能力：
+## 使用 / Usage
 
-- 按 K/M 档位测试上下文容量
-- 精确检索、多跳推理、规则冲突和对抗干扰题型
-- 普通模式与增强自动测试
-- 自动 token 校准、输出余量扩展和错误重试
-- 分题型评分、重复测试统计和完整响应元数据
-- 断点续跑、并发执行和全局请求限流
-- 跨 macOS、Windows、Linux 的 x64/ARM64 构建
+1. 双击 `index.html`（`file://` 直接可用，无需服务器）。
+2. 点「选择文件」或把文件拖到页面上：
+   - `checkpoint.json` — 必需，包含 `trials`；
+   - `run_config.public.json` — 可选，补全服务商、题型、证据容差等配置；
+   - `summary.json` — 也支持（trials 数组）。
+3. 也可以「选择运行目录」，一次读入整个 `run_*` 文件夹。
+4. 没有文件时点「没有文件？看示例」，会载入一份真实的 `run_20261108_161502` 结果。
 
-## 快速开始
+数据只在浏览器内存里解析，未载入前页面不发起任何网络请求；载入后可一键清除本地缓存。
 
-首次运行时，如果可执行文件旁没有 `config.txt`，程序会生成默认配置并退出。编辑配置后再次运行。
+## 页面内容 / What it shows
 
-```sh
-cd context-LLM
-./build.sh
-```
+- **运行头**：运行目录、服务商、模型、接口模式、题型、证据容差、题目数、数据来源与生成时间。
+- **读数条**：通过率、试次、证据命中率、总 token、平均耗时、档位数。
+- **建议**：下一次运行应使用的 `chars_per_token`（增强模式下取同档中位数）。
+- **概览**：各档位通过率、每次试次 token 用量（输入/输出）、每次试次耗时。
+- **运行状态**：checkpoint 的断点续跑信息（版本、阶段、二分区间、上限探测、配置指纹）与配置开关。
+- **档位总览**：等价于 `RESULTS.md` 的 Tier summary（次数、通过、通过率、超限、失败、输入均值/中位数/范围/合计、输出均值/合计、总量均值、平均耗时）。
+- **试次明细**：每次请求的实际用量与评分；展开一行查看分题型成绩与响应元数据（HTTP 状态、请求次数、CPT、校准目标、推理 token、种子、材料目录、响应文件）。
+- **题型分析**：按题型的热力图（证据命中率 + 平均行），对应 `RESULTS.md` 的 Mode breakdown。
+- **原始数据**：当前载入的 JSON，可复制或下载。
 
-构建后，`dist/` 中会生成当前平台对应的可执行文件。下面用 `<binary>` 代替实际文件名。
+## 功能 / Features
 
-至少替换三项：
+| 功能 | 说明 |
+| --- | --- |
+| 中英切换 | 右上角「中文 / EN」，选择会记住；可用 `?lang=en` 直接指定。 |
+| 移动端适配 | 1280 / 1024 / 768 / 390 宽度下重排；窄屏表格变为规格卡片，控件高度 ≥44px。 |
+| 导出 | `导出 Markdown` 重新生成 `RESULTS.md`；`导出 CSV` 导出试次明细；`打印 / 存为 PDF` 会展开所有明细。 |
+| 自动恢复 | 上次载入的数据存在 localStorage，刷新后仍在，可一键清除。 |
+| 深链 | `?lang=zh`、`?expand=1`（展开全部试次）、`#demo`（载入示例）。 |
+| 键盘 | 全部控件可 Tab；试次名称是按钮，回车/空格展开；`Esc` 关闭拖拽遮罩。 |
+| 无网络 | 不引用外部字体、图片、CDN；图标全部为内联 SVG。 |
 
-```ini
-base_url = 你的接口地址
-model = 你的模型 ID
-api_key = 你的 API 密钥
-```
+## 两点说明 / Notes
 
-先检查配置，不发送请求：
+- **列对齐修正**：`RESULTS.md` 的 Tier summary 表头把「输入合计 / 输出均值」写反了位置（`internal/report/report.go` 里数值顺序与表头不一致）。本页面按正确含义排列：输入合计 → 输出均值 → 输出合计 → 总量均值，其余数值与 `RESULTS.md` 完全一致。
+- **字体**：设计系统指定 Chivo / Chivo Mono。为保持「纯静态 + 离线」，页面不加载网络字体，`font-family` 里保留名字并回退到系统字体（中文回退到苹方/微软雅黑）。
 
-```sh
-./<binary> --dry-run
-```
-
-正式运行：
-
-```sh
-./<binary>
-```
-
-也可以从源码指定配置运行：
-
-```sh
-go run . --config ./config.txt
-```
-
-## 配置说明
-
-配置文件使用中文行内注释，`#` 后的内容会被忽略。
-
-### 服务商连接
-
-| 配置 | 默认值 | 说明 |
-|---|---|---|
-| `base_url` | `https://api.openai.com/v1` | OpenAI 兼容接口地址 |
-| `model` | `GPT6.1-Astra` | 被测模型 ID |
-| `api_key` | 占位密钥 | 正式运行前必须替换 |
-| `api_mode` | `chat-completions` | 可选 `chat-completions` 或 `responses` |
-| `reasoning_effort` | `default` | `default` 不发送；可选 `none/minimal/low/medium/high/xhigh/max` |
-| `reasoning_summary` | `default` | 仅 Responses；`default` 不发送，可选 `auto/concise/detailed` |
-
-### 上下文与输出
-
-| 配置 | 默认值 | 说明 |
-|---|---|---|
-| `tiers` | `200K, 400K, 600K, 800K, 1M` | 测试档位；支持纯数字、K、M 和小数 |
-| `chars_per_token` | `6.25` | 初始输入估算，后续按实际用量校准 |
-| `max_output_tokens` | `2500` | 最小输出预算，程序会按锚点数自动扩展 |
-| `timeout_seconds` | `900` | 单次请求超时时间 |
-| `transport_retries` | `1` | 可恢复错误的额外重试次数 |
-
-`tiers` 示例：
-
-```ini
-tiers = 20K, 1.1M, 2M
-```
-
-内部会统一转换为整数 token，并校验递增、唯一且大于 12K。
-
-### 自动测试
-
-| 配置 | 默认值 | 说明 |
-|---|---|---|
-| `auto_calibrate` | `true` | 根据实际输入 token 校准后续档位 |
-| `enhanced_auto_test` | `false` | 每档三次、中位数校准、自动二分 |
-| `structured_output` | `true` | 优先发送 JSON 结构约束 |
-| `parallel_tests` | `false` | 并行执行增强模式的同档三次测试 |
-| `request_interval_ms` | `0` | 全局请求起始间隔；0 表示不限速 |
-
-### 题目与评分
-
-| 配置 | 默认值 | 说明 |
-|---|---|---|
-| `anchor_count` | `13` | 总题目数，范围 13-50 |
-| `evidence_tolerance` | `0` | 每种题型允许的证据错误数，建议不超过 2 |
-| `test_modes` | 四类全开 | 逗号分隔的题型开关 |
-
-可用题型：
-
-| 模式 | 能力 |
-|---|---|
-| `needle` | 精确定位分散信息 |
-| `multi_hop` | 跨记录组合推理 |
-| `conflict` | 新旧规则冲突消解 |
-| `adversarial` | 相似错误信息干扰 |
-
-无论启用哪些题型，都会保留一题“材料不足”拒答题。
-
-## 测试流程
-
-### 普通模式
-
-1. 按 `tiers` 从小到大生成随机材料和题目。
-2. 每档执行一次完整测试。
-3. 遇到 `context_too_large` 后，使用新题复测前一档。
-4. 使用该次实际 `prompt_tokens` 校准后续档位。
-
-### 增强模式
-
-将 `enhanced_auto_test` 设为 `true` 后：
-
-1. 每档固定测试三次，每次生成新的随机题库。
-2. 使用三次输入 token 的中位数校准。
-3. 遇到失败档位后，在通过档与失败档之间按 1000 token 精度自动二分。
-4. 如果所有配置档位都通过，会继续向上探测上下限。
-
-### 请求可靠性
-
-- 网络中断、HTTP `408`、`429` 和可恢复 `5xx` 会指数退避重试。
-- 支持 `Retry-After`，单次等待上限 30 秒。
-- 上下文超长、鉴权错误和普通参数错误不会重试。
-- `structured_output` 不被供应商支持时会自动降级，并记录 fallback。
-- JSON 输出可自动提取和修复代码块、尾逗号、缺失结尾等常见问题。
-- `max_output_tokens` 是最小预算；若返回 `finish_reason=length`，会自动扩容一次。
-
-## Token 用量
-
-启动测试时会按档位显示预估用量，例如：
+## 文件 / Files
 
 ```text
-Estimated usage for 200000: input 189.5K, output 2.5K, total 192.0K
+render/
+├── index.html         页面结构（外壳、空状态、报告容器）
+└── assets/
+    ├── site.css       设计系统：调色板、排版、表格、图表、响应式、打印
+    ├── i18n.js        中英词典与格式化
+    ├── report.js      数据层：解析、聚合、校准、Markdown / CSV 导出（可单独在 Node 里用）
+    ├── charts.js      无依赖 SVG 图表
+    ├── app.js         DOM 渲染与交互（拖拽、文件、缓存、导出）
+    └── sample.js      内置示例数据（真实 run，无 API 密钥）
 ```
 
-测试完成后，`RESULTS.md` 会显示：
-
-- 每次实际输入、输出和总 token
-- 每档实际总量与平均总用量
-- 输入 token 均值、中位数和范围
-- 通过率、上下限次数、失败次数和平均耗时
-- 每种题型的答案与证据成绩
-
-## 结果文件
-
-每次运行保存在：
-
-```text
-runs/run_日期_时间/
-├── RESULTS.md
-├── summary.json
-├── tier_summary.json
-├── run_config.public.json
-└── checkpoint.json
-```
-
-测试成功后会删除大型材料、私有答案和原始响应。响应正文不会重复保存，但请求 ID、模型、状态、finish reason、usage、重试和输出扩容等元数据会保留在 `summary.json` 与 checkpoint 中。
-
-`RESULTS.md` 还包含 `Errors` 表，直接显示失败类型、HTTP 状态、错误代码、供应商消息和重试次数。
-
-`run_config.public.json` 不包含 API 密钥。
-
-## 断点续跑
-
-恢复最近一个未完成运行：
-
-```sh
-./<binary> --resume latest
-```
-
-指定运行目录：
-
-```sh
-./<binary> --resume runs/run_20261108_120000
-```
-
-恢复时会校验配置指纹。如果中断发生在某个档位中间，该档位会重新执行；之前完成的档位、探测阶段和二分边界会保留。
-
-## 常规验证
-
-完整验证包括格式检查、`go vet` 和竞态检测：
-
-```sh
-make verify
-```
-
-等价于依次执行：
-
-```sh
-gofmt -l main.go internal
-go vet ./...
-go test -race ./...
-```
-
-仅运行普通测试：
-
-```sh
-make test
-```
-
-## 跨平台构建
-
-无参数时自动识别当前系统，只构建对应版本：
-
-```sh
-./build.sh
-# 或
-make build
-```
-
-指定平台：
-
-```sh
-./build.sh windows-arm64
-./build.sh linux-x64
-```
-
-构建全部平台：
-
-```sh
-./build.sh all
-# 或
-make build-all
-```
-
-支持目标：
-
-- `macos-x64`
-- `macos-arm64`
-- `windows-x64`
-- `windows-arm64`
-- `linux-x64`
-- `linux-arm64`
-
-## GitHub Packages
-
-项目会发布多架构容器镜像到 GitHub Packages：
-
-```text
-ghcr.io/recaeent/context-llm
-```
-
-拉取当前版本：
-
-```sh
-docker pull ghcr.io/recaeent/context-llm:1.1.0
-```
-
-使用已准备好的配置运行：
-
-```sh
-docker run --rm \
-  -v "$PWD/config.txt:/app/config.txt:ro" \
-  ghcr.io/recaeent/context-llm:1.1.0
-```
-
-推送 `v*` 标签后，workflow 会自动构建 `linux/amd64` 和 `linux/arm64` 镜像，并发布 `v*` 与 `latest` 标签。
-
-## API 密钥安全
-
-- API 密钥只从 `config.txt` 读取。
-- 默认 `sk-123456789` 是占位符，正式运行前必须替换。
-- 程序不会修改已有配置文件的权限，请按操作系统管理文件访问权限。
-- 真实密钥不会写入公开配置、checkpoint、Markdown 报告或原始结果。
-- 如果配置文件中保存了真实密钥，启动时会提示不要分享该文件。
+`report.js` 与 `charts.js` 同时支持 `window.*` 与 `module.exports`，可以直接在 Node 里复算统计结果。
 
 ## License
 
-本项目使用 [The Unlicense](LICENSE)，将软件放入公共领域，允许任何人自由使用、修改和再发布。
-
-
-## 项目结构
-
-```text
-main.go                     程序入口与运行编排
-internal/config             配置解析与验证
-internal/corpus             题型、题库与长材料生成
-internal/provider           API 请求、响应解析与元数据
-internal/scoring            答案、证据和 JSON 修复评分
-internal/runner             测试执行、重试、校准、并发与恢复
-internal/report             统计汇总与 Markdown 报告
-build.sh                    跨平台构建脚本
-Makefile                    验证与构建入口
-Dockerfile                  GHCR 多架构镜像定义
-```
+与主项目一致：[The Unlicense](https://github.com/RecaEENT/context-LLM/blob/main/LICENSE)。

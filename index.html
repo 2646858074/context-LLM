@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-type="software" data-radius="sharp" data-buttons="solid">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Context-LLM · Benchmark Viewer</title>
+  <meta name="description" content="Open a local checkpoint.json from context-LLM and read a long-context benchmark run as a visual, offline report.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#161c1a">
+  <meta name="page-type" content="software">
+  <meta name="site-kind" content="software">
+  <meta property="og:title" content="Context-LLM · Benchmark Viewer">
+  <meta property="og:description" content="Visualize a context-LLM checkpoint.json offline in your browser.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%239fc7b8'/%3E%3Cpath d='M11 9v14M21 9v14M11 16h10' stroke='%23161c1a' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <a class="sr-only" href="#main">Skip to content</a>
+
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="./" aria-label="Context-LLM Benchmark Viewer">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+            <path d="M8 6v12M16 6v12M8 12h8"/>
+          </svg>
+        </span>
+        <span class="brand-name">Context-LLM</span>
+        <span class="brand-sub" data-i18n="app.subtitle">基准测试查看器</span>
+      </a>
+
+      <nav class="nav" aria-label="Sections">
+        <a href="#overview" data-i18n="nav.overview">概览</a>
+        <a href="#tiers" data-i18n="nav.tiers">档位</a>
+        <a href="#trials" data-i18n="nav.trials">试次</a>
+        <a href="#modes" data-i18n="nav.modes">题型</a>
+        <a href="#raw" data-i18n="nav.raw">原始数据</a>
+      </nav>
+
+      <div class="header-spacer"></div>
+
+      <div class="header-actions">
+        <div class="seg" role="group" aria-label="Language" id="langSwitch">
+          <button type="button" data-lang="zh-CN" aria-pressed="true">中文</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <a class="icon-btn" href="https://github.com/RecaEENT/context-LLM" target="_blank" rel="noopener noreferrer"
+           aria-label="View the project on GitHub">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page" id="main">
+    <!-- ============================ Empty state ============================ -->
+    <section class="empty" id="emptyState">
+      <h1 data-enter="1" data-i18n="empty.title">打开一份 checkpoint.json</h1>
+      <p class="empty-lead" data-enter="2" data-i18n="empty.desc">文件只在你自己的浏览器里解析，不会上传到任何服务器。</p>
+
+      <div class="dropzone" id="dropzone" data-enter="3">
+        <div class="dropzone-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/>
+            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+          </svg>
+        </div>
+        <p class="dropzone-title" data-i18n="empty.drop">把文件拖到这里</p>
+        <div class="dropzone-or" data-i18n="empty.or">或</div>
+        <div class="dropzone-actions">
+          <button type="button" class="btn btn--primary" id="pickFile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 6a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z"/>
+            </svg>
+            <span data-i18n="empty.pickOne">选择文件</span>
+          </button>
+          <button type="button" class="btn" id="pickFolder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7a2 2 0 0 1 2-2h3.6l1.8 2H19a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/>
+              <path d="M12 11v4m-2-2h4"/>
+            </svg>
+            <span data-i18n="empty.pickFolder">选择运行目录</span>
+          </button>
+          <button type="button" class="btn btn--ghost" id="loadSample">
+            <span data-i18n="empty.sample">没有文件？看示例</span>
+          </button>
+        </div>
+        <p class="dropzone-note">
+          <span data-i18n="empty.formatsLabel">支持的文件</span>：
+          <code>checkpoint.json</code> · <code>summary.json</code> · <code>run_config.public.json</code>
+        </p>
+      </div>
+
+      <div class="notes" data-enter="4">
+        <div class="note">
+          <h3 data-i18n="empty.multiTitle">可以一起拖入</h3>
+          <p data-i18n="empty.multiValue">同时拖入 run_config.public.json 或整个 run_* 目录，服务商、题型、证据容差会自动补全。</p>
+        </div>
+        <div class="note">
+          <h3 data-i18n="empty.localTitle">完全离线</h3>
+          <p data-i18n="empty.localValue">不需要联网，不发起任何请求，适合在离线机器上查看测试结果。</p>
+        </div>
+        <div class="note">
+          <h3 data-i18n="empty.privacyTitle">不含密钥</h3>
+          <p data-i18n="empty.privacyValue">checkpoint 与公开配置都不保存 API 密钥，可以放心分享。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== Report ============================== -->
+    <div class="report" id="report" hidden>
+      <div class="banner" id="restoreBanner" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 8v5m0 3.5v.5"/><circle cx="12" cy="12" r="9"/>
+        </svg>
+        <span id="restoreText"></span>
+        <button type="button" class="btn btn--sm btn--ghost" id="clearCache" data-i18n="action.clearSaved">清除本地缓存</button>
+      </div>
+
+      <div class="report-head">
+        <div class="report-title">
+          <h1><span class="mono" id="reportTitle"></span></h1>
+          <div class="badges" id="reportBadges"></div>
+          <dl class="spec" id="reportSpec"></dl>
+          <p class="source-line" id="sourceLine"></p>
+        </div>
+        <div class="report-actions">
+          <button type="button" class="btn btn--primary" id="replaceFile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 6a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z"/>
+            </svg>
+            <span data-i18n="action.replace">更换文件</span>
+          </button>
+          <button type="button" class="btn" id="exportMd" data-i18n="action.exportMd">导出 Markdown</button>
+          <button type="button" class="btn" id="exportCsv" data-i18n="action.exportCsv">导出 CSV</button>
+          <button type="button" class="btn btn--ghost" id="printBtn" data-i18n="action.print">打印 / 存为 PDF</button>
+        </div>
+      </div>
+
+      <div class="readout" id="readout"></div>
+      <p class="recommend-line" id="recommendLine" hidden></p>
+
+      <section class="section" id="overview">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="section.overview">概览</h2>
+          <p class="section-desc" data-i18n="section.overviewDesc">这次运行的关键指标，以及 checkpoint 记录的运行状态。</p>
+        </div>
+        <div class="chart-grid" id="chartGrid"></div>
+
+        <div class="panel" style="margin-top:16px">
+          <div class="panel-head">
+            <h3 data-i18n="section.status">运行状态</h3>
+            <span class="section-desc" data-i18n="section.statusDesc">来自 checkpoint.json 的断点续跑信息。</span>
+          </div>
+          <div class="panel-body">
+            <dl class="state-list" id="stateList"></dl>
+            <p class="hint-line" id="noConfigNote" hidden></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="tiers">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="section.tiers">档位总览</h2>
+          <p class="section-desc" data-i18n="section.tiersDesc">按测试档位汇总次数、通过率与 token 用量，等价于 RESULTS.md 的 Tier summary。</p>
+        </div>
+        <div class="panel">
+          <div class="panel-body panel-body--flush">
+            <div class="dt" id="tierTable"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="trials">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="section.trials">试次明细</h2>
+          <p class="section-desc" data-i18n="section.trialsDesc">每一次请求的实际用量与评分；展开任意一行查看分题型成绩和响应元数据。</p>
+          <div class="section-actions">
+            <button type="button" class="btn btn--sm btn--ghost" id="expandAll" data-i18n="action.expandAll">全部展开</button>
+            <button type="button" class="btn btn--sm btn--ghost" id="collapseAll" data-i18n="action.collapseAll">全部收起</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-body panel-body--flush">
+            <div class="dt" id="trialTable"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="modes">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="section.modes">题型分析</h2>
+          <p class="section-desc" data-i18n="section.modesDesc">按题型拆分的答案与证据命中情况；颜色越深表示证据命中率越低。</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3 data-i18n="mode.breakdownTitle">题型明细</h3>
+            <div class="spacer"></div>
+            <div class="chart-legend" id="heatLegend"></div>
+          </div>
+          <div class="panel-body">
+            <div class="heat-scroll">
+              <div class="heat" id="heatmap"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="raw">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="section.raw">原始数据</h2>
+          <p class="section-desc" data-i18n="section.rawDesc">当前载入的 JSON，可用于核对或排查。</p>
+        </div>
+        <div class="panel">
+          <div class="raw-head">
+            <div class="raw-tabs" id="rawTabs" role="tablist"></div>
+            <div class="raw-actions">
+              <button type="button" class="btn btn--sm" id="copyRaw" data-i18n="action.copy">复制</button>
+              <button type="button" class="btn btn--sm" id="downloadRaw" data-i18n="action.download">下载</button>
+            </div>
+          </div>
+          <div class="raw-body">
+            <pre class="raw-pre" id="rawPre" tabindex="0"></pre>
+          </div>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <span><span class="footer-dot" aria-hidden="true"></span><span data-i18n="footer.offline">纯静态页面 · 所有解析都在本地完成</span></span>
+        <span class="spacer"></span>
+        <span>
+          <span data-i18n="footer.builtFor">用于可视化</span>
+          <a href="https://github.com/RecaEENT/context-LLM" target="_blank" rel="noopener noreferrer">RecaEENT/context-LLM</a>
+        </span>
+        <span class="footer-license">· <span data-i18n="footer.license">The Unlicense</span></span>
+      </footer>
+    </div>
+  </main>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
+
+  <input type="file" id="fileInput" accept=".json,application/json" multiple hidden>
+  <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+
+  <div id="dropOverlay" hidden style="position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:var(--bg);opacity:.96">
+    <div style="padding:26px 34px;border:2px dashed var(--accent);border-radius:var(--r-md);background:var(--surface);text-align:center">
+      <div style="font-size:14px;font-weight:500" id="dropOverlayText">松开即可载入</div>
+    </div>
+  </div>
+
+  <script src="assets/i18n.js"></script>
+  <script src="assets/report.js"></script>
+  <script src="assets/charts.js"></script>
+  <script src="assets/sample.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
