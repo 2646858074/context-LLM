@@ -53,7 +53,7 @@ Static, offline, dependency-free — just open `index.html`.
 ## 文件 / Files
 
 ```text
-edit/
+render/
 ├── index.html         页面结构（外壳、空状态、报告容器）
 └── assets/
     ├── site.css       设计系统：调色板、排版、表格、图表、响应式、打印

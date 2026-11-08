@@ -19,10 +19,10 @@ desktop.ini
 *.swp
 *.log
 
-# --- Scratch from building the static viewer under edit/ ---
-edit/_shots/
-edit/_tests/
-edit/.taste-skill/
+# --- Scratch from building the static viewer under render/ ---
+render/_shots/
+render/_tests/
+render/.taste-skill/
 
 # --- Node tooling, only if a build step is ever added ---
 node_modules/
