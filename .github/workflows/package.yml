@@ -17,7 +17,7 @@ permissions:
 
 env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-  IMAGE_NAME: ghcr.io/RecaEENT/context-llm
+  IMAGE_NAME: ghcr.io/recaeent/context-llm
 
 jobs:
   publish:
