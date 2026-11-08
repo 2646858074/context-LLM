@@ -19,9 +19,11 @@
 首次运行时，如果可执行文件旁没有 `config.txt`，程序会生成默认配置并退出。编辑配置后再次运行。
 
 ```sh
-cd /Users/reca/Desktop/CODE/context-LLM
+cd context-LLM
 ./build.sh
 ```
+
+构建后，`dist/` 中会生成当前平台对应的可执行文件。下面用 `<binary>` 代替实际文件名。
 
 至少替换三项：
 
@@ -34,19 +36,13 @@ api_key = 你的 API 密钥
 先检查配置，不发送请求：
 
 ```sh
-./dist/context_llm_macos_amd64 --dry-run
-```
-
-Apple Silicon 使用：
-
-```sh
-./dist/context_llm_macos_arm64 --dry-run
+./<binary> --dry-run
 ```
 
 正式运行：
 
 ```sh
-./dist/context_llm_macos_amd64
+./<binary>
 ```
 
 也可以从源码指定配置运行：
@@ -180,13 +176,13 @@ runs/run_日期_时间/
 恢复最近一个未完成运行：
 
 ```sh
-./dist/context_llm_macos_amd64 --resume latest
+./<binary> --resume latest
 ```
 
 指定运行目录：
 
 ```sh
-./dist/context_llm_macos_amd64 --resume runs/run_20261108_120000
+./<binary> --resume runs/run_20261108_120000
 ```
 
 恢复时会校验配置指纹。如果中断发生在某个档位中间，该档位会重新执行；之前完成的档位、探测阶段和二分边界会保留。
