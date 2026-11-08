@@ -429,7 +429,13 @@ func (runner *Runner) runTrial(tier int, label string) (Trial, error) {
 			started := time.Now()
 			result = provider.Send(requestConfig, string(material), string(questions))
 			result.Raw["_benchmark"] = manifest
-			result.Raw["_request"] = map[string]string{"base_url": runner.Config.BaseURL, "api_mode": runner.Config.APIMode, "model": runner.Config.Model}
+			result.Raw["_request"] = map[string]string{
+				"base_url":          runner.Config.BaseURL,
+				"api_mode":          runner.Config.APIMode,
+				"model":             runner.Config.Model,
+				"reasoning_effort":  runner.Config.ReasoningEffort,
+				"reasoning_summary": runner.Config.ReasoningSummary,
+			}
 			result.Raw["_extracted_text"] = result.Text
 			result.Raw["_elapsed_seconds"] = math.Round(float64(time.Since(started).Milliseconds())/1000*1000) / 1000
 			result.Raw["_attempt"] = attempts

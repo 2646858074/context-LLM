@@ -96,6 +96,9 @@ func buildPayload(cfg config.Config, userInput string, structured bool) (string,
 		if structured {
 			payload["response_format"] = map[string]any{"type": "json_object"}
 		}
+		if cfg.ReasoningEffort != "" && cfg.ReasoningEffort != "default" {
+			payload["reasoning_effort"] = cfg.ReasoningEffort
+		}
 	} else {
 		endpoint = "/responses"
 		payload = map[string]any{
@@ -106,6 +109,16 @@ func buildPayload(cfg config.Config, userInput string, structured bool) (string,
 		}
 		if structured {
 			payload["text"] = map[string]any{"format": map[string]any{"type": "json_object"}}
+		}
+		reasoning := map[string]any{}
+		if cfg.ReasoningEffort != "" && cfg.ReasoningEffort != "default" {
+			reasoning["effort"] = cfg.ReasoningEffort
+		}
+		if cfg.ReasoningSummary != "" && cfg.ReasoningSummary != "default" {
+			reasoning["summary"] = cfg.ReasoningSummary
+		}
+		if len(reasoning) > 0 {
+			payload["reasoning"] = reasoning
 		}
 	}
 	return endpoint, payload
