@@ -65,6 +65,8 @@ go run . --config ./config.txt
 | `model` | `GPT6.1-Astra` | 被测模型 ID |
 | `api_key` | 占位密钥 | 正式运行前必须替换 |
 | `api_mode` | `chat-completions` | 可选 `chat-completions` 或 `responses` |
+| `reasoning_effort` | `default` | `default` 不发送；可选 `none/minimal/low/medium/high/xhigh/max` |
+| `reasoning_summary` | `default` | 仅 Responses；`default` 不发送，可选 `auto/concise/detailed` |
 
 ### 上下文与输出
 

@@ -187,6 +187,8 @@ func PublicConfig(cfg config.Config) map[string]any {
 		"base_url":            cfg.BaseURL,
 		"model":               cfg.Model,
 		"api_mode":            cfg.APIMode,
+		"reasoning_effort":    cfg.ReasoningEffort,
+		"reasoning_summary":   cfg.ReasoningSummary,
 		"tiers":               cfg.Tiers,
 		"chars_per_token":     cfg.CharsPerToken,
 		"max_output_tokens":   cfg.MaxOutputTokens,

@@ -30,7 +30,7 @@ func main() {
 		}
 	}
 
-	cfg, err := config.Load(path, !*dryRun)
+	cfg, err := config.Load(path, false)
 	if errors.Is(err, os.ErrNotExist) {
 		if writeErr := config.WriteDefault(path); writeErr != nil {
 			fatal("create default configuration: %v", writeErr)
@@ -44,13 +44,6 @@ func main() {
 	if cfg.APIKey != "" && cfg.APIKey != config.PlaceholderAPIKey {
 		fmt.Fprintln(os.Stderr, "Warning: API key is stored in config.txt; keep that file private and do not share it.")
 	}
-	if *dryRun {
-		fmt.Println("Configuration valid. No API request was sent.")
-		return
-	}
-	if cfg.EvidenceTolerance > 2 {
-		fmt.Printf("Warning: evidence_tolerance=%d weakens evidence validation; values above 2 are not recommended.\n", cfg.EvidenceTolerance)
-	}
 	for _, estimate := range report.EstimateUsage(cfg) {
 		fmt.Printf(
 			"Estimated usage for %d: input %.1fK, output %.1fK, total %.1fK\n",
@@ -59,6 +52,19 @@ func main() {
 			float64(estimate.OutputTokens)/1000,
 			float64(estimate.TotalTokens)/1000,
 		)
+	}
+	if *dryRun {
+		fmt.Println("Configuration valid. No API request was sent.")
+		return
+	}
+	if cfg.APIKey == "" {
+		fatal("missing API key: set api_key in config.txt")
+	}
+	if cfg.APIKey == config.PlaceholderAPIKey {
+		fatal("placeholder API key is not valid: replace api_key in config.txt")
+	}
+	if cfg.EvidenceTolerance > 2 {
+		fmt.Printf("Warning: evidence_tolerance=%d weakens evidence validation; values above 2 are not recommended.\n", cfg.EvidenceTolerance)
 	}
 
 	var runRoot, checkpointPath string

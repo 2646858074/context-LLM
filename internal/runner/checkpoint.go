@@ -34,6 +34,8 @@ func ConfigSignature(cfg config.Config) string {
 		BaseURL           string   `json:"base_url"`
 		Model             string   `json:"model"`
 		APIMode           string   `json:"api_mode"`
+		ReasoningEffort   string   `json:"reasoning_effort"`
+		ReasoningSummary  string   `json:"reasoning_summary"`
 		Tiers             []int    `json:"tiers"`
 		CharsPerToken     float64  `json:"chars_per_token"`
 		MaxOutputTokens   int      `json:"max_output_tokens"`
@@ -50,6 +52,8 @@ func ConfigSignature(cfg config.Config) string {
 		BaseURL:           cfg.BaseURL,
 		Model:             cfg.Model,
 		APIMode:           cfg.APIMode,
+		ReasoningEffort:   cfg.ReasoningEffort,
+		ReasoningSummary:  cfg.ReasoningSummary,
 		Tiers:             append([]int(nil), cfg.Tiers...),
 		CharsPerToken:     cfg.CharsPerToken,
 		MaxOutputTokens:   cfg.MaxOutputTokens,

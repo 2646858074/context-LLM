@@ -65,6 +65,8 @@ The configuration file supports Chinese inline comments. Everything after `#` is
 | `model` | `GPT6.1-Astra` | Model ID to test |
 | `api_key` | Placeholder key | Must be replaced before a real run |
 | `api_mode` | `chat-completions` | `chat-completions` or `responses` |
+| `reasoning_effort` | `default` | `default` omits the parameter; options are `none/minimal/low/medium/high/xhigh/max` |
+| `reasoning_summary` | `default` | Responses only; `default` omits it, options are `auto/concise/detailed` |
 
 ### Context And Output
 

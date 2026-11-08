@@ -20,6 +20,8 @@ type Config struct {
 	Model             string
 	APIKey            string
 	APIMode           string
+	ReasoningEffort   string
+	ReasoningSummary  string
 	Tiers             []int
 	CharsPerToken     float64
 	MaxOutputTokens   int
@@ -93,6 +95,14 @@ func Load(path string, requireKey bool) (Config, error) {
 	if provider["api_mode"] != "chat-completions" && provider["api_mode"] != "responses" {
 		return Config{}, errors.New("api_mode must be chat-completions or responses")
 	}
+	reasoningEffort, err := parseReasoningEffort(provider["reasoning_effort"])
+	if err != nil {
+		return Config{}, err
+	}
+	reasoningSummary, err := parseReasoningSummary(provider["reasoning_summary"])
+	if err != nil {
+		return Config{}, err
+	}
 
 	tiers, err := parseTiers(bench["tiers"])
 	if err != nil {
@@ -156,6 +166,8 @@ func Load(path string, requireKey bool) (Config, error) {
 		Model:             provider["model"],
 		APIKey:            apiKey,
 		APIMode:           provider["api_mode"],
+		ReasoningEffort:   reasoningEffort,
+		ReasoningSummary:  reasoningSummary,
 		Tiers:             tiers,
 		CharsPerToken:     chars,
 		MaxOutputTokens:   maxOutput,
@@ -187,6 +199,8 @@ base_url = https://api.openai.com/v1       # OpenAI 兼容接口地址
 model = GPT6.1-Astra                       # 要测试的模型 ID
 api_key = sk-123456789                     # 占位符，正式测试前必须替换
 api_mode = chat-completions                # 可选：chat-completions / responses
+reasoning_effort = default                 # 可用：default（不发送）/ none / minimal / low / medium / high / xhigh / max
+reasoning_summary = default                # 仅 Responses：default（不发送）/ auto / concise / detailed
 
 # ============================================================
 # 上下文与输出
@@ -271,6 +285,26 @@ func parseTestModes(raw string) ([]string, error) {
 		return nil, errors.New("test_modes must enable at least one test mode")
 	}
 	return modes, nil
+}
+
+func parseReasoningEffort(raw string) (string, error) {
+	value := strings.ToLower(strings.TrimSpace(defaultString(raw, "default")))
+	switch value {
+	case "default", "none", "minimal", "low", "medium", "high", "xhigh", "max":
+		return value, nil
+	default:
+		return "", errors.New("reasoning_effort must be default, none, minimal, low, medium, high, xhigh, or max")
+	}
+}
+
+func parseReasoningSummary(raw string) (string, error) {
+	value := strings.ToLower(strings.TrimSpace(defaultString(raw, "default")))
+	switch value {
+	case "default", "auto", "concise", "detailed":
+		return value, nil
+	default:
+		return "", errors.New("reasoning_summary must be default, auto, concise, or detailed")
+	}
 }
 
 func stripInlineComment(value string) string {
