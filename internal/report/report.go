@@ -103,6 +103,28 @@ func Markdown(cfg config.Config, trials []runner.Trial, root string) string {
 			stat.ElapsedSecondsAverage,
 		))
 	}
+	lines = append(lines, "", "## Errors", "", "| Tier | Trial | Kind | HTTP | Attempts | Code | Message |", "|---:|---|---|---:|---:|---|---|")
+	errorRows := 0
+	for _, trial := range trials {
+		if trial.Score.State == "passed" && !trial.ContextTooLarge {
+			continue
+		}
+		detail := errorDetail(trial)
+		errorRows++
+		lines = append(lines, fmt.Sprintf(
+			"| %s | %s | %s | %s | %d | %s | %s |",
+			comma(trial.Tier),
+			trial.Label,
+			errorKind(trial),
+			errorHTTPStatus(trial),
+			trial.Attempts,
+			sanitizeCell(detail.Code),
+			sanitizeCell(detail.Message),
+		))
+	}
+	if errorRows == 0 {
+		lines = append(lines, "| — | — | none | — | 0 | — | No failures detected. |")
+	}
 	lines = append(lines, "", "| Configured tier | Trial | CPT used | Actual input | Actual output | Actual total | Recommended CPT | Output limit | Result | Score |", "|---:|---|---:|---:|---:|---:|---:|---:|---|---|")
 	for _, trial := range trials {
 		actual, recommended := "—", "—"
@@ -159,6 +181,100 @@ func Markdown(cfg config.Config, trials []runner.Trial, root string) string {
 		}
 	}
 	return strings.Join(lines, "\n") + "\n"
+}
+
+type reportErrorDetail struct {
+	Code    string
+	Message string
+}
+
+func errorKind(trial runner.Trial) string {
+	if trial.ContextTooLarge {
+		return "context_limit"
+	}
+	return trial.Score.State
+}
+
+func errorHTTPStatus(trial runner.Trial) string {
+	if trial.HTTPStatus > 0 {
+		return strconv.Itoa(trial.HTTPStatus)
+	}
+	return "—"
+}
+
+func errorDetail(trial runner.Trial) reportErrorDetail {
+	if trial.ContextTooLarge {
+		message := trial.Score.Detail
+		if message == "" {
+			message = "input exceeded the model context window"
+		}
+		return reportErrorDetail{Code: "context_too_large", Message: message}
+	}
+	if trial.Score.State == "scored_failure" {
+		message := trial.Score.Detail
+		if message == "" && len(trial.Score.Missed) > 0 {
+			message = "missed: " + strings.Join(trial.Score.Missed, ", ")
+		}
+		return reportErrorDetail{Code: "scored_failure", Message: message}
+	}
+	if trial.Score.State == "invalid_answer_json" {
+		return reportErrorDetail{Code: "invalid_answer_json", Message: trial.Score.Detail}
+	}
+	detail := trial.Score.Detail
+	if detail == "" {
+		detail = trial.TransportError
+	}
+	parsed := parseProviderError(detail)
+	if parsed.Code != "" || parsed.Message != "" {
+		return parsed
+	}
+	return reportErrorDetail{Code: trial.Score.State, Message: detail}
+}
+
+func parseProviderError(detail string) reportErrorDetail {
+	if detail == "" {
+		return reportErrorDetail{}
+	}
+	var payload struct {
+		Error any `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(detail), &payload); err != nil {
+		return reportErrorDetail{Message: detail}
+	}
+	switch typed := payload.Error.(type) {
+	case string:
+		return reportErrorDetail{Message: typed}
+	case map[string]any:
+		result := reportErrorDetail{Message: stringValueFromAny(typed["message"])}
+		result.Code = stringValueFromAny(typed["code"])
+		if result.Code == "" {
+			result.Code = stringValueFromAny(typed["type"])
+		}
+		return result
+	default:
+		return reportErrorDetail{Message: detail}
+	}
+}
+
+func stringValueFromAny(value any) string {
+	if value == nil {
+		return ""
+	}
+	if text, ok := value.(string); ok {
+		return text
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Sprint(value)
+	}
+	return string(data)
+}
+
+func sanitizeCell(value string) string {
+	value = strings.ReplaceAll(value, "|", "\\|")
+	value = strings.ReplaceAll(value, "\r", " ")
+	value = strings.ReplaceAll(value, "\n", " ")
+	return strings.TrimSpace(value)
 }
 
 func trialsForTier(trials []runner.Trial, tier int) []runner.Trial {
