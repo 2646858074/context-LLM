@@ -39,6 +39,9 @@ func TestWriteAndLoadDefaultConfig(t *testing.T) {
 	if cfg.EnhancedAutoTest {
 		t.Fatal("enhanced auto test should default to false")
 	}
+	if cfg.BinaryPrecisionTokens != 10000 {
+		t.Fatalf("unexpected binary precision: %d", cfg.BinaryPrecisionTokens)
+	}
 	if cfg.ReasoningEffort != "default" || cfg.ReasoningSummary != "default" {
 		t.Fatalf("reasoning defaults changed: %#v", cfg)
 	}
@@ -128,6 +131,28 @@ func TestParseReportLanguage(t *testing.T) {
 	}
 	if cfg.ReportLanguage != "cn" {
 		t.Fatalf("Chinese report language was not loaded: %q", cfg.ReportLanguage)
+	}
+}
+
+func TestBinaryPrecisionIsConfigurable(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.txt")
+	if err := WriteDefault(path); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated := strings.Replace(string(data), "binary_precision_tokens = 10000", "binary_precision_tokens = 2500", 1)
+	if err := os.WriteFile(path, []byte(updated), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.BinaryPrecisionTokens != 2500 {
+		t.Fatalf("custom binary precision was not loaded: %d", cfg.BinaryPrecisionTokens)
 	}
 }
 

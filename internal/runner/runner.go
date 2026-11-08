@@ -347,7 +347,10 @@ func (runner *Runner) runProbe(state *Checkpoint) ([]Trial, error) {
 }
 
 func (runner *Runner) runBinarySearch(state *Checkpoint) ([]Trial, error) {
-	const precision = 1000
+	precision := runner.Config.BinaryPrecisionTokens
+	if precision <= 0 {
+		precision = 10000
+	}
 	fmt.Fprintf(runner.Out, "Binary search between %s and %s tokens (precision %d) …\n", comma(state.BinaryLow), comma(state.BinaryHigh), precision)
 	for state.BinaryHigh-state.BinaryLow > precision {
 		mid := ((state.BinaryLow + state.BinaryHigh) / 2 / precision) * precision

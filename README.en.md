@@ -120,6 +120,7 @@ All tiers are converted to integer tokens and validated as unique, ascending, an
 |---|---|---|
 | `auto_calibrate` | `true` | Calibrate later tiers from actual input tokens |
 | `enhanced_auto_test` | `false` | Three runs per tier, median calibration, automatic binary search |
+| `binary_precision_tokens` | `10000` | Enhanced-mode binary-search precision in tokens |
 | `structured_output` | `true` | Prefer JSON structure constraints |
 | `parallel_tests` | `false` | Run the three enhanced-mode trials concurrently |
 | `request_interval_ms` | `0` | Global request start interval; `0` means unlimited |
@@ -165,7 +166,7 @@ Set `enhanced_auto_test = true` to enable:
 
 1. Three independent trials per tier, each with a new random question set.
 2. Median calibration across the three input-token measurements.
-3. Binary search between the passing and failing tiers at 1000-token precision.
+3. Binary search between the passing and failing tiers using `binary_precision_tokens`, defaulting to 10000 tokens.
 4. Additional upward probes if every configured tier passes.
 
 ### Request Reliability

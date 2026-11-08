@@ -16,27 +16,28 @@ const HeadroomTokens = 12000
 const PlaceholderAPIKey = "sk-123456789"
 
 type Config struct {
-	BaseURL           string
-	Model             string
-	APIKey            string
-	APIMode           string
-	ReasoningEffort   string
-	ReasoningSummary  string
-	Tiers             []int
-	CharsPerToken     float64
-	MaxOutputTokens   int
-	Timeout           time.Duration
-	TransportRetries  int
-	AutoCalibrate     bool
-	EnhancedAutoTest  bool
-	StructuredOutput  bool
-	ParallelTests     bool
-	RequestIntervalMS int
-	AnchorCount       int
-	EvidenceTolerance int
-	TestModes         []string
-	ReportLanguage    string
-	PreviewAfterRun   bool
+	BaseURL               string
+	Model                 string
+	APIKey                string
+	APIMode               string
+	ReasoningEffort       string
+	ReasoningSummary      string
+	Tiers                 []int
+	CharsPerToken         float64
+	MaxOutputTokens       int
+	Timeout               time.Duration
+	TransportRetries      int
+	AutoCalibrate         bool
+	EnhancedAutoTest      bool
+	BinaryPrecisionTokens int
+	StructuredOutput      bool
+	ParallelTests         bool
+	RequestIntervalMS     int
+	AnchorCount           int
+	EvidenceTolerance     int
+	TestModes             []string
+	ReportLanguage        string
+	PreviewAfterRun       bool
 }
 
 func DefaultPath() (string, error) {
@@ -138,6 +139,10 @@ func Load(path string, requireKey bool) (Config, error) {
 	if err != nil {
 		return Config{}, errors.New("enhanced_auto_test must be true or false")
 	}
+	binaryPrecisionTokens, err := strconv.Atoi(defaultString(bench["binary_precision_tokens"], "10000"))
+	if err != nil || binaryPrecisionTokens <= 0 {
+		return Config{}, errors.New("binary_precision_tokens must be a positive integer")
+	}
 	structuredOutput, err := strconv.ParseBool(defaultString(bench["structured_output"], "true"))
 	if err != nil {
 		return Config{}, errors.New("structured_output must be true or false")
@@ -172,27 +177,28 @@ func Load(path string, requireKey bool) (Config, error) {
 	}
 
 	return Config{
-		BaseURL:           strings.TrimRight(provider["base_url"], "/"),
-		Model:             provider["model"],
-		APIKey:            apiKey,
-		APIMode:           provider["api_mode"],
-		ReasoningEffort:   reasoningEffort,
-		ReasoningSummary:  reasoningSummary,
-		Tiers:             tiers,
-		CharsPerToken:     chars,
-		MaxOutputTokens:   maxOutput,
-		Timeout:           time.Duration(timeoutSeconds) * time.Second,
-		TransportRetries:  retries,
-		AutoCalibrate:     autoCalibrate,
-		EnhancedAutoTest:  enhancedAutoTest,
-		StructuredOutput:  structuredOutput,
-		ParallelTests:     parallelTests,
-		RequestIntervalMS: requestIntervalMS,
-		AnchorCount:       anchorCount,
-		EvidenceTolerance: evidenceTolerance,
-		TestModes:         testModes,
-		ReportLanguage:    reportLanguage,
-		PreviewAfterRun:   previewAfterRun,
+		BaseURL:               strings.TrimRight(provider["base_url"], "/"),
+		Model:                 provider["model"],
+		APIKey:                apiKey,
+		APIMode:               provider["api_mode"],
+		ReasoningEffort:       reasoningEffort,
+		ReasoningSummary:      reasoningSummary,
+		Tiers:                 tiers,
+		CharsPerToken:         chars,
+		MaxOutputTokens:       maxOutput,
+		Timeout:               time.Duration(timeoutSeconds) * time.Second,
+		TransportRetries:      retries,
+		AutoCalibrate:         autoCalibrate,
+		EnhancedAutoTest:      enhancedAutoTest,
+		BinaryPrecisionTokens: binaryPrecisionTokens,
+		StructuredOutput:      structuredOutput,
+		ParallelTests:         parallelTests,
+		RequestIntervalMS:     requestIntervalMS,
+		AnchorCount:           anchorCount,
+		EvidenceTolerance:     evidenceTolerance,
+		TestModes:             testModes,
+		ReportLanguage:        reportLanguage,
+		PreviewAfterRun:       previewAfterRun,
 	}, nil
 }
 
@@ -237,6 +243,7 @@ transport_retries  = 1      # 可恢复错误的额外重试次数
 # ============================================================
 auto_calibrate       = true  # 按实际输入 token 校准后续档位
 enhanced_auto_test   = false # true：每档三次、中位数校准、自动二分
+binary_precision_tokens = 10000 # 二分搜索精度，单位：token
 structured_output    = true  # 优先启用 JSON 结构约束
 parallel_tests       = false # true：并行执行增强模式的三次测试
 request_interval_ms  = 0     # 全局请求间隔；0 表示不限速

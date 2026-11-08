@@ -120,6 +120,7 @@ tiers = 20K, 1.1M, 2M
 |---|---|---|
 | `auto_calibrate` | `true` | 根据实际输入 token 校准后续档位 |
 | `enhanced_auto_test` | `false` | 每档三次、中位数校准、自动二分 |
+| `binary_precision_tokens` | `10000` | 增强模式二分搜索精度，单位 token |
 | `structured_output` | `true` | 优先发送 JSON 结构约束 |
 | `parallel_tests` | `false` | 并行执行增强模式的同档三次测试 |
 | `request_interval_ms` | `0` | 全局请求起始间隔；0 表示不限速 |
@@ -165,7 +166,7 @@ tiers = 20K, 1.1M, 2M
 
 1. 每档固定测试三次，每次生成新的随机题库。
 2. 使用三次输入 token 的中位数校准。
-3. 遇到失败档位后，在通过档与失败档之间按 1000 token 精度自动二分。
+3. 遇到失败档位后，在通过档与失败档之间按 `binary_precision_tokens` 指定的精度自动二分，默认 10000 token。
 4. 如果所有配置档位都通过，会继续向上探测上下限。
 
 ### 请求可靠性
