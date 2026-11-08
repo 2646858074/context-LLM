@@ -1,5 +1,7 @@
 # context-LLM
 
+[English](README.en.md) | 中文
+
 一个无第三方 Go 依赖的长上下文测试工具，用于评估 OpenAI 兼容接口。
 
 当前版本：`1.1.0`
