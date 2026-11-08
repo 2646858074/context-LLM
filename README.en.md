@@ -173,6 +173,8 @@ runs/run_date_time/
 
 After a successful run, large materials, private answers, and raw responses are deleted. Response text is not duplicated, but request ID, model, status, finish reason, usage, retries, and output-expansion metadata remain in `summary.json` and the checkpoint.
 
+`RESULTS.md` also includes an `Errors` table showing failure type, HTTP status, error code, provider message, and retry count.
+
 `run_config.public.json` never contains the API key.
 
 ## Resume

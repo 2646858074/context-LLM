@@ -39,7 +39,11 @@ func Response(corpusPath string, response map[string]any, evidenceTolerance int)
 		return Score{State: "request_failed", Detail: err.Error()}
 	}
 	if status := intValue(response["http_status"]); status >= 400 || response["transport_error"] != nil {
-		return Score{State: "request_failed", QuestionCount: len(expected)}
+		detail := stringValue(response["error"])
+		if detail == "" {
+			detail = stringValue(response["transport_error"])
+		}
+		return Score{State: "request_failed", QuestionCount: len(expected), Detail: detail}
 	}
 
 	actual, repaired, err := decodeAnswers(stringValue(response["_extracted_text"]))

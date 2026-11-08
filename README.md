@@ -173,6 +173,8 @@ runs/run_日期_时间/
 
 测试成功后会删除大型材料、私有答案和原始响应。响应正文不会重复保存，但请求 ID、模型、状态、finish reason、usage、重试和输出扩容等元数据会保留在 `summary.json` 与 checkpoint 中。
 
+`RESULTS.md` 还包含 `Errors` 表，直接显示失败类型、HTTP 状态、错误代码、供应商消息和重试次数。
+
 `run_config.public.json` 不包含 API 密钥。
 
 ## 断点续跑
