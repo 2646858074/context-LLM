@@ -239,6 +239,30 @@ Supported targets:
 - `linux-x64`
 - `linux-arm64`
 
+## GitHub Packages
+
+The project publishes a multi-architecture container image to GitHub Packages:
+
+```text
+ghcr.io/recaent/context-llm
+```
+
+Pull the current version:
+
+```sh
+docker pull ghcr.io/recaent/context-llm:1.1.0
+```
+
+Run it with a prepared configuration:
+
+```sh
+docker run --rm \
+  -v "$PWD/config.txt:/app/config.txt:ro" \
+  ghcr.io/recaent/context-llm:1.1.0
+```
+
+Pushing a `v*` tag automatically builds `linux/amd64` and `linux/arm64` images and publishes both `v*` and `latest` tags.
+
 ## API Key Security
 
 - The API key is read only from `config.txt`.
@@ -263,4 +287,5 @@ internal/runner             Execution, retries, calibration, concurrency, and re
 internal/report             Statistics and Markdown reports
 build.sh                    Cross-platform build script
 Makefile                    Verification and build entry points
+Dockerfile                  GHCR multi-architecture image definition
 ```

@@ -245,6 +245,30 @@ make build-all
 - `linux-x64`
 - `linux-arm64`
 
+## GitHub Packages
+
+项目会发布多架构容器镜像到 GitHub Packages：
+
+```text
+ghcr.io/recaent/context-llm
+```
+
+拉取当前版本：
+
+```sh
+docker pull ghcr.io/recaent/context-llm:1.1.0
+```
+
+使用已准备好的配置运行：
+
+```sh
+docker run --rm \
+  -v "$PWD/config.txt:/app/config.txt:ro" \
+  ghcr.io/recaent/context-llm:1.1.0
+```
+
+推送 `v*` 标签后，workflow 会自动构建 `linux/amd64` 和 `linux/arm64` 镜像，并发布 `v*` 与 `latest` 标签。
+
 ## API 密钥安全
 
 - API 密钥只从 `config.txt` 读取。
@@ -270,4 +294,5 @@ internal/runner             测试执行、重试、校准、并发与恢复
 internal/report             统计汇总与 Markdown 报告
 build.sh                    跨平台构建脚本
 Makefile                    验证与构建入口
+Dockerfile                  GHCR 多架构镜像定义
 ```
