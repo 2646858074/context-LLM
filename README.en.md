@@ -4,7 +4,7 @@ English | [中文](README.md)
 
 A dependency-free Go tool for testing the long-context reliability of OpenAI-compatible APIs.
 
-Current version: `1.2.0`
+Current version: `1.2.1`
 
 Key capabilities:
 
@@ -291,7 +291,7 @@ ghcr.io/recaeent/context-llm
 Pull the current version:
 
 ```sh
-docker pull ghcr.io/recaeent/context-llm:1.2.0
+docker pull ghcr.io/recaeent/context-llm:1.2.1
 ```
 
 Run it with a prepared configuration:
@@ -299,7 +299,7 @@ Run it with a prepared configuration:
 ```sh
 docker run --rm \
   -v "$PWD/config.txt:/app/config.txt:ro" \
-  ghcr.io/recaeent/context-llm:1.2.0
+  ghcr.io/recaeent/context-llm:1.2.1
 ```
 
 Pushing a `v*` tag automatically builds `linux/amd64` and `linux/arm64` images and publishes both `v*` and `latest` tags.
