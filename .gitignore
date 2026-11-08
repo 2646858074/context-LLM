@@ -1,8 +1,32 @@
+# --- Local run configuration (contains the API key) ---
 config.txt
+
+# --- Run output ---
 runs/
 dist/
-.DS_Store
+
+# --- Build artifacts ---
 context-LLM
+*.exe
+*.test
+
+# --- OS and editor noise ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.log
+
+# --- Scratch from building the static viewer under edit/ ---
+edit/_shots/
+edit/_tests/
+edit/.taste-skill/
+
+# --- Node tooling, only if a build step is ever added ---
+node_modules/
+.pnpm-store/
 
 # Test source files are excluded from source-upload lists.
 *_test.go
