@@ -1,0 +1,300 @@
+package config
+
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"math"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+)
+
+const HeadroomTokens = 12000
+const PlaceholderAPIKey = "sk-123456789"
+
+type Config struct {
+	BaseURL           string
+	Model             string
+	APIKey            string
+	APIMode           string
+	Tiers             []int
+	CharsPerToken     float64
+	MaxOutputTokens   int
+	Timeout           time.Duration
+	TransportRetries  int
+	AutoCalibrate     bool
+	EnhancedAutoTest  bool
+	StructuredOutput  bool
+	ParallelTests     bool
+	RequestIntervalMS int
+	AnchorCount       int
+	EvidenceTolerance int
+	TestModes         []string
+}
+
+func DefaultPath() (string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(filepath.Dir(executable), "config.txt"), nil
+}
+
+func Load(path string, requireKey bool) (Config, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return Config{}, err
+	}
+	defer file.Close()
+
+	sections := map[string]map[string]string{}
+	section := ""
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(stripInlineComment(scanner.Text()))
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
+			continue
+		}
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			section = strings.TrimSpace(line[1 : len(line)-1])
+			sections[section] = map[string]string{}
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok || section == "" {
+			return Config{}, fmt.Errorf("invalid line %q", line)
+		}
+		sections[section][strings.TrimSpace(key)] = strings.TrimSpace(stripInlineComment(value))
+	}
+	if err := scanner.Err(); err != nil {
+		return Config{}, err
+	}
+
+	provider, okProvider := sections["provider"]
+	bench, okBench := sections["benchmark"]
+	if !okProvider || !okBench {
+		return Config{}, errors.New("both [provider] and [benchmark] sections are required")
+	}
+	for _, key := range []string{"base_url", "model", "api_mode"} {
+		if provider[key] == "" {
+			return Config{}, fmt.Errorf("missing provider setting %q", key)
+		}
+	}
+	apiKey := provider["api_key"]
+	if requireKey && apiKey == "" {
+		return Config{}, errors.New("missing API key: set api_key in config.txt")
+	}
+	if requireKey && apiKey == PlaceholderAPIKey {
+		return Config{}, errors.New("placeholder API key is not valid: replace api_key in config.txt")
+	}
+	if provider["api_mode"] != "chat-completions" && provider["api_mode"] != "responses" {
+		return Config{}, errors.New("api_mode must be chat-completions or responses")
+	}
+
+	tiers, err := parseTiers(bench["tiers"])
+	if err != nil {
+		return Config{}, err
+	}
+	chars, err := strconv.ParseFloat(defaultString(bench["chars_per_token"], "6.25"), 64)
+	if err != nil || chars <= 0 {
+		return Config{}, errors.New("chars_per_token must be a positive number")
+	}
+	maxOutput, err := strconv.Atoi(defaultString(bench["max_output_tokens"], "2500"))
+	if err != nil || maxOutput <= 0 {
+		return Config{}, errors.New("max_output_tokens must be a positive integer")
+	}
+	timeoutSeconds, err := strconv.Atoi(defaultString(bench["timeout_seconds"], "900"))
+	if err != nil || timeoutSeconds <= 0 {
+		return Config{}, errors.New("timeout_seconds must be a positive integer")
+	}
+	retries, err := strconv.Atoi(defaultString(bench["transport_retries"], "1"))
+	if err != nil || retries < 0 {
+		return Config{}, errors.New("transport_retries must be zero or greater")
+	}
+	autoCalibrate, err := strconv.ParseBool(defaultString(bench["auto_calibrate"], "true"))
+	if err != nil {
+		return Config{}, errors.New("auto_calibrate must be true or false")
+	}
+	enhancedValue := bench["enhanced_auto_test"]
+	if enhancedValue == "" {
+		enhancedValue = bench["增强的自动测试"]
+	}
+	enhancedAutoTest, err := strconv.ParseBool(defaultString(enhancedValue, "false"))
+	if err != nil {
+		return Config{}, errors.New("enhanced_auto_test must be true or false")
+	}
+	structuredOutput, err := strconv.ParseBool(defaultString(bench["structured_output"], "true"))
+	if err != nil {
+		return Config{}, errors.New("structured_output must be true or false")
+	}
+	parallelTests, err := strconv.ParseBool(defaultString(bench["parallel_tests"], "false"))
+	if err != nil {
+		return Config{}, errors.New("parallel_tests must be true or false")
+	}
+	requestIntervalMS, err := strconv.Atoi(defaultString(bench["request_interval_ms"], "0"))
+	if err != nil || requestIntervalMS < 0 {
+		return Config{}, errors.New("request_interval_ms must be zero or greater")
+	}
+	anchorCount, err := strconv.Atoi(defaultString(bench["anchor_count"], "13"))
+	if err != nil || anchorCount < 13 || anchorCount > 50 {
+		return Config{}, errors.New("anchor_count must be an integer from 13 to 50")
+	}
+	evidenceTolerance, err := strconv.Atoi(defaultString(bench["evidence_tolerance"], "0"))
+	if err != nil || evidenceTolerance < 0 || evidenceTolerance > anchorCount {
+		return Config{}, fmt.Errorf("evidence_tolerance must be an integer from 0 to %d", anchorCount)
+	}
+	testModes, err := parseTestModes(defaultString(bench["test_modes"], "needle,multi_hop,conflict,adversarial"))
+	if err != nil {
+		return Config{}, err
+	}
+
+	return Config{
+		BaseURL:           strings.TrimRight(provider["base_url"], "/"),
+		Model:             provider["model"],
+		APIKey:            apiKey,
+		APIMode:           provider["api_mode"],
+		Tiers:             tiers,
+		CharsPerToken:     chars,
+		MaxOutputTokens:   maxOutput,
+		Timeout:           time.Duration(timeoutSeconds) * time.Second,
+		TransportRetries:  retries,
+		AutoCalibrate:     autoCalibrate,
+		EnhancedAutoTest:  enhancedAutoTest,
+		StructuredOutput:  structuredOutput,
+		ParallelTests:     parallelTests,
+		RequestIntervalMS: requestIntervalMS,
+		AnchorCount:       anchorCount,
+		EvidenceTolerance: evidenceTolerance,
+		TestModes:         testModes,
+	}, nil
+}
+
+func WriteDefault(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return writeText(path, `# context-LLM 配置
+# 修改后重新运行程序；# 后面的内容均为注释，不会参与解析。
+
+# ============================================================
+# 服务商连接
+# ============================================================
+[provider]
+base_url = https://api.openai.com/v1       # OpenAI 兼容接口地址
+model = GPT6.1-Astra                       # 要测试的模型 ID
+api_key = sk-123456789                     # 占位符，正式测试前必须替换
+api_mode = chat-completions                # 可选：chat-completions / responses
+
+# ============================================================
+# 上下文与输出
+# ============================================================
+[benchmark]
+tiers = 200K, 400K, 600K, 800K, 1M         # 测试档位；支持 K、M 和小数，如 1.1M
+chars_per_token = 6.25                     # 初始输入估算，后续按实际用量校准
+max_output_tokens = 2500                   # 最小输出预算，程序会按锚点数自动扩展
+timeout_seconds = 900                      # 单次请求超时时间，单位：秒
+transport_retries = 1                      # 可恢复网络/HTTP 错误的额外重试次数
+
+# ============================================================
+# 自动测试
+# ============================================================
+auto_calibrate = true                      # 按实际输入 token 校准后续档位
+enhanced_auto_test = false                 # true：每档三次、中位数校准、自动二分
+structured_output = true                   # 优先启用 JSON 结构约束
+parallel_tests = false                     # true：并行执行增强模式的三次测试
+request_interval_ms = 0                    # 全局请求间隔，0 表示不限速
+
+# ============================================================
+# 题目与评分
+# ============================================================
+anchor_count = 13                          # 总题目数，范围 13-50
+# 锚点越多，弱模型越容易漏答或返回异常 JSON。
+evidence_tolerance = 0                     # 每种题型允许的证据错误数；建议不超过 2
+test_modes = needle,multi_hop,conflict,adversarial
+# 可用题型：needle / multi_hop / conflict / adversarial
+`)
+}
+
+func parseTiers(raw string) ([]int, error) {
+	if raw == "" {
+		return nil, errors.New("tiers is required")
+	}
+	values := []int{}
+	seen := map[int]bool{}
+	last := 0
+	for _, part := range strings.Split(raw, ",") {
+		tier, err := parseTierToken(strings.TrimSpace(part))
+		if err != nil || tier <= HeadroomTokens || tier <= last || seen[tier] {
+			return nil, fmt.Errorf("tiers must use unique ascending token values greater than %d; K and M units are supported", HeadroomTokens)
+		}
+		values, seen[tier], last = append(values, tier), true, tier
+	}
+	return values, nil
+}
+
+func parseTierToken(raw string) (int, error) {
+	if raw == "" {
+		return 0, errors.New("empty tier")
+	}
+	upper := strings.ToUpper(raw)
+	multiplier := 1.0
+	switch {
+	case strings.HasSuffix(upper, "K"):
+		multiplier = 1000
+		upper = strings.TrimSpace(strings.TrimSuffix(upper, "K"))
+	case strings.HasSuffix(upper, "M"):
+		multiplier = 1_000_000
+		upper = strings.TrimSpace(strings.TrimSuffix(upper, "M"))
+	}
+	value, err := strconv.ParseFloat(upper, 64)
+	if err != nil || math.IsNaN(value) || math.IsInf(value, 0) || value <= 0 {
+		return 0, fmt.Errorf("invalid tier %q", raw)
+	}
+	return int(math.Round(value * multiplier)), nil
+}
+
+func parseTestModes(raw string) ([]string, error) {
+	valid := map[string]bool{"needle": true, "multi_hop": true, "conflict": true, "adversarial": true}
+	modes := []string{}
+	seen := map[string]bool{}
+	for _, part := range strings.Split(raw, ",") {
+		mode := strings.TrimSpace(strings.ToLower(part))
+		if mode == "" || !valid[mode] || seen[mode] {
+			return nil, errors.New("test_modes must contain unique values from: needle, multi_hop, conflict, adversarial")
+		}
+		modes, seen[mode] = append(modes, mode), true
+	}
+	if len(modes) == 0 {
+		return nil, errors.New("test_modes must enable at least one test mode")
+	}
+	return modes, nil
+}
+
+func stripInlineComment(value string) string {
+	for _, marker := range []string{" #", " ;"} {
+		if index := strings.Index(value, marker); index >= 0 {
+			value = value[:index]
+		}
+	}
+	return strings.TrimSpace(value)
+}
+
+func defaultString(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func writeText(path, text string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteString(text)
+	return err
+}

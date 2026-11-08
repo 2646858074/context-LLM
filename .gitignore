@@ -3,3 +3,6 @@ runs/
 dist/
 .DS_Store
 context-LLM
+
+# Test source files are excluded from source-upload lists.
+*_test.go
