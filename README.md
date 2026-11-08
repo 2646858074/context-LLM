@@ -4,7 +4,7 @@
 
 一个无第三方 Go 依赖的长上下文测试工具，用于评估 OpenAI 兼容接口。
 
-当前版本：`1.1.0`
+当前版本：`1.2.0`
 
 主要能力：
 
@@ -295,7 +295,7 @@ ghcr.io/recaeent/context-llm
 拉取当前版本：
 
 ```sh
-docker pull ghcr.io/recaeent/context-llm:1.1.0
+docker pull ghcr.io/recaeent/context-llm:1.2.0
 ```
 
 使用已准备好的配置运行：
@@ -303,7 +303,7 @@ docker pull ghcr.io/recaeent/context-llm:1.1.0
 ```sh
 docker run --rm \
   -v "$PWD/config.txt:/app/config.txt:ro" \
-  ghcr.io/recaeent/context-llm:1.1.0
+  ghcr.io/recaeent/context-llm:1.2.0
 ```
 
 推送 `v*` 标签后，workflow 会自动构建 `linux/amd64` 和 `linux/arm64` 镜像，并发布 `v*` 与 `latest` 标签。
