@@ -201,48 +201,63 @@ func WriteDefault(path string) error {
 		return err
 	}
 	return writeText(path, `# context-LLM 配置
-# 修改后重新运行程序；# 后面的内容均为注释，不会参与解析。
+# 修改后重新运行程序；# 后面的内容是注释，不参与解析。
 
 # ============================================================
 # 服务商连接
 # ============================================================
 [provider]
-base_url = https://api.openai.com/v1       # OpenAI 兼容接口地址
-model = GPT6.1-Astra                       # 要测试的模型 ID
-api_key = sk-123456789                     # 占位符，正式测试前必须替换
-api_mode = chat-completions                # 可选：chat-completions / responses
-reasoning_effort = default                 # 可用：default（不发送）/ none / minimal / low / medium / high / xhigh / max
-reasoning_summary = default                # 仅 Responses：default（不发送）/ auto / concise / detailed
+base_url           = https://api.openai.com/v1 # OpenAI 兼容接口地址
+model              = GPT6.1-Astra             # 被测模型 ID
+api_key            = sk-123456789             # 占位符，正式测试前必须替换
+api_mode           = chat-completions          # 接口格式
+
+# 思考等级；default 表示不发送该参数。
+# 可选：none / minimal / low / medium / high / xhigh / max
+reasoning_effort   = default
+
+# 仅 responses 生效；default 表示不发送该参数。
+# 可选：auto / concise / detailed
+reasoning_summary  = default
 
 # ============================================================
 # 上下文与输出
 # ============================================================
 [benchmark]
-tiers = 200K, 400K, 600K, 800K, 1M         # 测试档位；支持 K、M 和小数，如 1.1M
-chars_per_token = 6.25                     # 初始输入估算，后续按实际用量校准
-max_output_tokens = 2500                   # 最小输出预算，程序会按锚点数自动扩展
-timeout_seconds = 900                      # 单次请求超时时间，单位：秒
-transport_retries = 1                      # 可恢复网络/HTTP 错误的额外重试次数
+# 测试档位；支持纯数字、K、M 和小数，如 1.1M
+tiers              = 200K, 400K, 600K, 800K, 1M
+
+chars_per_token    = 6.25   # 初始输入估算，后续按实际用量校准
+max_output_tokens  = 2500   # 最小输出预算，会按锚点数自动扩展
+timeout_seconds    = 900    # 单次请求超时时间，单位：秒
+transport_retries  = 1      # 可恢复错误的额外重试次数
 
 # ============================================================
 # 自动测试
 # ============================================================
-auto_calibrate = true                      # 按实际输入 token 校准后续档位
-enhanced_auto_test = false                 # true：每档三次、中位数校准、自动二分
-structured_output = true                   # 优先启用 JSON 结构约束
-parallel_tests = false                     # true：并行执行增强模式的三次测试
-request_interval_ms = 0                    # 全局请求间隔，0 表示不限速
+auto_calibrate       = true  # 按实际输入 token 校准后续档位
+enhanced_auto_test   = false # true：每档三次、中位数校准、自动二分
+structured_output    = true  # 优先启用 JSON 结构约束
+parallel_tests       = false # true：并行执行增强模式的三次测试
+request_interval_ms  = 0     # 全局请求间隔；0 表示不限速
 
 # ============================================================
 # 题目与评分
 # ============================================================
-anchor_count = 13                          # 总题目数，范围 13-50
-# 锚点越多，弱模型越容易漏答或返回异常 JSON。
-evidence_tolerance = 0                     # 每种题型允许的证据错误数；建议不超过 2
-test_modes = needle,multi_hop,conflict,adversarial
+# 总题目数，范围 13-50。锚点越多，弱模型越容易漏答或返回异常 JSON。
+anchor_count         = 13
+
+# 每种题型允许的证据错误数；建议不超过 2。
+evidence_tolerance   = 0
+
 # 可用题型：needle / multi_hop / conflict / adversarial
-report_language = en # RESULTS.md 输出语言：en（英文）/ cn（中文）
-preview_after_run = false # 测试完成后自动打开 RESULTS.md 预览；默认关闭
+test_modes           = needle,multi_hop,conflict,adversarial
+
+# RESULTS.md 输出语言：en（英文）或 cn（中文）
+report_language      = en
+
+# 测试完成后自动打开 RESULTS.md 预览
+preview_after_run    = false
 `)
 }
 
