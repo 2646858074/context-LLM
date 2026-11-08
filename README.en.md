@@ -192,8 +192,10 @@ After testing, `RESULTS.md` includes:
 - Actual input, output, and total tokens for every trial
 - Actual tier totals and average total usage
 - Input-token average, median, and range
-- Pass rate, context-limit count, failure count, and average latency
+- Pass rate, context-limit count, failure count, average latency, median latency, and P95
 - Per-mode answer and evidence results
+- Actual returned model, finish reason, cached/reasoning tokens
+- Structured-output fallback and automatic JSON repair status
 
 ## Result Files
 

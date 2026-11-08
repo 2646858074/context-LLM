@@ -3,6 +3,7 @@ package report
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -34,6 +35,8 @@ type TierStats struct {
 	TotalTokensTotal        int     `json:"total_tokens_total,omitempty"`
 	TotalTokensAverage      float64 `json:"total_tokens_average,omitempty"`
 	ElapsedSecondsAverage   float64 `json:"elapsed_seconds_average,omitempty"`
+	ElapsedSecondsMedian    float64 `json:"elapsed_seconds_median,omitempty"`
+	ElapsedSecondsP95       float64 `json:"elapsed_seconds_p95,omitempty"`
 }
 
 type UsageEstimate struct {
@@ -41,6 +44,111 @@ type UsageEstimate struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
 	TotalTokens  int `json:"total_tokens"`
+}
+
+type responseMetadataSummary struct {
+	Model              string
+	FinishReason       string
+	CachedTokens       *int
+	ReasoningTokens    *int
+	StructuredFallback *bool
+	JSONRepaired       bool
+}
+
+func summarizeResponseMetadata(trial runner.Trial) responseMetadataSummary {
+	metadata := trial.ResponseMetadata
+	if metadata == nil {
+		metadata = map[string]any{}
+	}
+	return responseMetadataSummary{
+		Model:              stringValueFromAny(metadata["model"]),
+		FinishReason:       responseFinishReason(metadata),
+		CachedTokens:       responseTokenCount(metadata, "cached_tokens", "prompt_tokens_details", "input_tokens_details"),
+		ReasoningTokens:    responseTokenCount(metadata, "reasoning_tokens", "completion_tokens_details", "output_tokens_details"),
+		StructuredFallback: responseBool(metadata["_structured_output_fallback"]),
+		JSONRepaired:       trial.Score.Repaired,
+	}
+}
+
+func responseFinishReason(metadata map[string]any) string {
+	if choices, ok := metadata["choices"].([]any); ok && len(choices) > 0 {
+		if choice, ok := choices[0].(map[string]any); ok {
+			if reason, ok := choice["finish_reason"].(string); ok && reason != "" {
+				return reason
+			}
+		}
+	}
+	if status, ok := metadata["status"].(string); ok && status != "" {
+		if status == "incomplete" {
+			if details, ok := metadata["incomplete_details"].(map[string]any); ok {
+				if reason, ok := details["reason"].(string); ok && reason != "" {
+					return status + ":" + reason
+				}
+			}
+		}
+		return status
+	}
+	if output, ok := metadata["output"].([]any); ok && len(output) > 0 {
+		if item, ok := output[0].(map[string]any); ok {
+			if status, ok := item["status"].(string); ok && status != "" {
+				return status
+			}
+		}
+	}
+	return ""
+}
+
+func responseTokenCount(metadata map[string]any, key string, detailKeys ...string) *int {
+	usage, ok := metadata["usage"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	for _, detailKey := range detailKeys {
+		if details, ok := usage[detailKey].(map[string]any); ok {
+			if raw, exists := details[key]; exists {
+				result := intValueFromAny(raw)
+				return &result
+			}
+		}
+	}
+	return nil
+}
+
+func responseBool(value any) *bool {
+	if result, ok := value.(bool); ok {
+		return &result
+	}
+	return nil
+}
+
+func intValueFromAny(value any) int {
+	switch typed := value.(type) {
+	case int:
+		return typed
+	case int64:
+		return int(typed)
+	case float64:
+		return int(typed)
+	case json.Number:
+		result, _ := typed.Int64()
+		return int(result)
+	default:
+		return 0
+	}
+}
+
+func boolText(value bool, trueText, falseText string) string {
+	if value {
+		return trueText
+	}
+	return falseText
+}
+
+func orDash(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "—"
+	}
+	return value
 }
 
 func Markdown(cfg config.Config, trials []runner.Trial, root string) string {
@@ -62,7 +170,7 @@ func Markdown(cfg config.Config, trials []runner.Trial, root string) string {
 		}
 	}
 	stats := Aggregate(trials)
-	lines = append(lines, "", "## Tier summary", "", "| Tier | Status | Trials | Passed | Pass rate | Context limits | Failed | Input avg | Input median | Input range | Input total | Output avg | Output total | Total avg | Latency avg |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|")
+	lines = append(lines, "", "## Tier summary", "", "| Tier | Status | Trials | Passed | Pass rate | Context limits | Failed | Input avg | Input median | Input range | Input total | Output avg | Output total | Total avg | Latency avg | Latency median | P95 |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|")
 	for _, stat := range stats {
 		inputAverage, inputMedian, inputRange := "—", "—", "—"
 		if stat.PromptTokensSamples > 0 {
@@ -85,7 +193,7 @@ func Markdown(cfg config.Config, trials []runner.Trial, root string) string {
 			totalAverage = formatK(int(stat.TotalTokensAverage))
 		}
 		lines = append(lines, fmt.Sprintf(
-			"| %s | %s | %d | %d | %.1f%% | %d | %d | %s | %s | %s | %s | %s | %s | %s | %.2fs |",
+			"| %s | %s | %d | %d | %.1f%% | %d | %d | %s | %s | %s | %s | %s | %s | %s | %.2fs | %.2fs | %.2fs |",
 			comma(stat.Tier),
 			stat.Status,
 			stat.Trials,
@@ -101,6 +209,39 @@ func Markdown(cfg config.Config, trials []runner.Trial, root string) string {
 			outputTotal,
 			totalAverage,
 			stat.ElapsedSecondsAverage,
+			stat.ElapsedSecondsMedian,
+			stat.ElapsedSecondsP95,
+		))
+	}
+	lines = append(lines, "", "## Response metadata", "", "| Tier | Trial | Model | Finish reason | Cached tokens | Reasoning tokens | Structured fallback | JSON repaired |", "|---:|---|---|---|---:|---:|---|---|")
+	if len(trials) == 0 {
+		lines = append(lines, "| — | — | — | — | — | — | — | — |")
+	}
+	for _, trial := range trials {
+		summary := summarizeResponseMetadata(trial)
+		cached, reasoning, fallback, repaired := "—", "—", "—", "no"
+		if summary.CachedTokens != nil {
+			cached = comma(*summary.CachedTokens)
+		}
+		if summary.ReasoningTokens != nil {
+			reasoning = comma(*summary.ReasoningTokens)
+		}
+		if summary.StructuredFallback != nil {
+			fallback = boolText(*summary.StructuredFallback, "yes", "no")
+		}
+		if summary.JSONRepaired {
+			repaired = "yes"
+		}
+		lines = append(lines, fmt.Sprintf(
+			"| %s | %s | %s | %s | %s | %s | %s | %s |",
+			comma(trial.Tier),
+			trial.Label,
+			sanitizeCell(orDash(summary.Model)),
+			sanitizeCell(orDash(summary.FinishReason)),
+			cached,
+			reasoning,
+			fallback,
+			repaired,
 		))
 	}
 	lines = append(lines, "", "## Errors", "", "| Tier | Trial | Kind | HTTP | Attempts | Code | Message |", "|---:|---|---|---:|---:|---|---|")
@@ -204,7 +345,7 @@ func MarkdownChinese(cfg config.Config, trials []runner.Trial, root string) stri
 	}
 
 	stats := Aggregate(trials)
-	lines = append(lines, "", "## 档位汇总", "", "| 档位 | 状态 | 测试数 | 通过 | 通过率 | 上下限 | 失败 | 输入均值 | 输入中位数 | 输入范围 | 输入总量 | 输出均值 | 输出总量 | 总量均值 | 平均耗时 |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|")
+	lines = append(lines, "", "## 档位汇总", "", "| 档位 | 状态 | 测试数 | 通过 | 通过率 | 上下限 | 失败 | 输入均值 | 输入中位数 | 输入范围 | 输入总量 | 输出均值 | 输出总量 | 总量均值 | 平均耗时 | 耗时中位数 | P95 |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|")
 	for _, stat := range stats {
 		inputAverage, inputMedian, inputRange := "—", "—", "—"
 		if stat.PromptTokensSamples > 0 {
@@ -226,7 +367,7 @@ func MarkdownChinese(cfg config.Config, trials []runner.Trial, root string) stri
 			totalAverage = formatK(int(stat.TotalTokensAverage))
 		}
 		lines = append(lines, fmt.Sprintf(
-			"| %s | %s | %d | %d | %.1f%% | %d | %d | %s | %s | %s | %s | %s | %s | %s | %.2fs |",
+			"| %s | %s | %d | %d | %.1f%% | %d | %d | %s | %s | %s | %s | %s | %s | %s | %.2fs | %.2fs | %.2fs |",
 			comma(stat.Tier),
 			chineseTierStatus(stat.Status),
 			stat.Trials,
@@ -242,6 +383,40 @@ func MarkdownChinese(cfg config.Config, trials []runner.Trial, root string) stri
 			outputTotal,
 			totalAverage,
 			stat.ElapsedSecondsAverage,
+			stat.ElapsedSecondsMedian,
+			stat.ElapsedSecondsP95,
+		))
+	}
+
+	lines = append(lines, "", "## 响应元数据", "", "| 档位 | 测试 | 实际模型 | 结束原因 | 缓存 Token | 思考 Token | 结构化降级 | JSON 修复 |", "|---:|---|---|---|---:|---:|---|---|")
+	if len(trials) == 0 {
+		lines = append(lines, "| — | — | — | — | — | — | — | — |")
+	}
+	for _, trial := range trials {
+		summary := summarizeResponseMetadata(trial)
+		cached, reasoning, fallback, repaired := "—", "—", "—", "否"
+		if summary.CachedTokens != nil {
+			cached = comma(*summary.CachedTokens)
+		}
+		if summary.ReasoningTokens != nil {
+			reasoning = comma(*summary.ReasoningTokens)
+		}
+		if summary.StructuredFallback != nil {
+			fallback = boolText(*summary.StructuredFallback, "是", "否")
+		}
+		if summary.JSONRepaired {
+			repaired = "是"
+		}
+		lines = append(lines, fmt.Sprintf(
+			"| %s | %s | %s | %s | %s | %s | %s | %s |",
+			comma(trial.Tier),
+			trial.Label,
+			sanitizeCell(orDash(summary.Model)),
+			sanitizeCell(orDash(chineseFinishReason(summary.FinishReason))),
+			cached,
+			reasoning,
+			fallback,
+			repaired,
 		))
 	}
 
@@ -348,6 +523,28 @@ func chineseErrorKind(kind string) string {
 		return "评分失败"
 	default:
 		return kind
+	}
+}
+
+func chineseFinishReason(reason string) string {
+	switch strings.ToLower(reason) {
+	case "stop":
+		return "停止"
+	case "length":
+		return "长度截断"
+	case "content_filter":
+		return "内容过滤"
+	case "completed":
+		return "完成"
+	case "incomplete":
+		return "未完成"
+	case "failed":
+		return "失败"
+	default:
+		if strings.HasPrefix(strings.ToLower(reason), "incomplete:") {
+			return "未完成：" + strings.TrimPrefix(reason, "incomplete:")
+		}
+		return reason
 	}
 }
 
@@ -664,7 +861,10 @@ func Aggregate(trials []runner.Trial) []TierStats {
 			stat.TotalTokensAverage = averageInts(totalValues)
 		}
 		if len(elapsedValues) > 0 {
+			sort.Float64s(elapsedValues)
 			stat.ElapsedSecondsAverage = averageFloats(elapsedValues)
+			stat.ElapsedSecondsMedian = medianFloats(elapsedValues)
+			stat.ElapsedSecondsP95 = percentileFloats(elapsedValues, 0.95)
 		}
 		stats = append(stats, stat)
 	}
@@ -704,6 +904,31 @@ func averageFloats(values []float64) float64 {
 		total += value
 	}
 	return total / float64(len(values))
+}
+
+func medianFloats(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	middle := len(values) / 2
+	if len(values)%2 == 1 {
+		return values[middle]
+	}
+	return (values[middle-1] + values[middle]) / 2
+}
+
+func percentileFloats(values []float64, percentile float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	index := int(math.Ceil(percentile*float64(len(values)))) - 1
+	if index < 0 {
+		index = 0
+	}
+	if index >= len(values) {
+		index = len(values) - 1
+	}
+	return values[index]
 }
 
 func WriteJSON(path string, value any) error {

@@ -192,8 +192,10 @@ Estimated usage for 200000: input 189.5K, output 2.5K, total 192.0K
 - 每次实际输入、输出和总 token
 - 每档实际总量与平均总用量
 - 输入 token 均值、中位数和范围
-- 通过率、上下限次数、失败次数和平均耗时
+- 通过率、上下限次数、失败次数、平均耗时、耗时中位数和 P95
 - 每种题型的答案与证据成绩
+- 实际返回模型、finish reason、cached/reasoning tokens
+- 结构化输出是否降级，以及 JSON 是否自动修复
 
 ## 结果文件
 

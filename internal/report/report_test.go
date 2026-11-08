@@ -136,8 +136,44 @@ func TestAggregateSummarizesRepeatedTrials(t *testing.T) {
 	if stat.CompletionTokensAverage != 20 || stat.ElapsedSecondsAverage != 2 {
 		t.Fatalf("unexpected output/latency statistics: %#v", stat)
 	}
+	if stat.ElapsedSecondsMedian != 2 || stat.ElapsedSecondsP95 != 3 {
+		t.Fatalf("unexpected latency statistics: %#v", stat)
+	}
 	if stat.PromptTokensTotal != 330 || stat.CompletionTokensTotal != 60 || stat.TotalTokensTotal != 390 || stat.TotalTokensAverage != 130 {
 		t.Fatalf("unexpected token totals: %#v", stat)
+	}
+}
+
+func TestMarkdownIncludesResponseMetadata(t *testing.T) {
+	cfg := config.Config{TestModes: []string{"needle"}}
+	trial := runner.Trial{
+		Tier:  200000,
+		Label: "primary",
+		ResponseMetadata: map[string]any{
+			"model":                       "actual-model",
+			"_structured_output_fallback": true,
+			"choices": []any{
+				map[string]any{"finish_reason": "stop"},
+			},
+			"usage": map[string]any{
+				"prompt_tokens_details":     map[string]any{"cached_tokens": 0},
+				"completion_tokens_details": map[string]any{"reasoning_tokens": 123},
+			},
+		},
+		Score: scoring.Score{State: "passed", Repaired: true},
+	}
+	english := Markdown(cfg, []runner.Trial{trial}, "/tmp/run")
+	for _, expected := range []string{"## Response metadata", "actual-model", "stop", "| 0 | 123 | yes | yes |"} {
+		if !strings.Contains(english, expected) {
+			t.Fatalf("English metadata missing %q:\n%s", expected, english)
+		}
+	}
+	cfg.ReportLanguage = "cn"
+	chinese := MarkdownChinese(cfg, []runner.Trial{trial}, "/tmp/run")
+	for _, expected := range []string{"## 响应元数据", "actual-model", "停止", "| 0 | 123 | 是 | 是 |"} {
+		if !strings.Contains(chinese, expected) {
+			t.Fatalf("Chinese metadata missing %q:\n%s", expected, chinese)
+		}
 	}
 }
 
