@@ -48,6 +48,7 @@ func ConfigSignature(cfg config.Config) string {
 		AnchorCount       int      `json:"anchor_count"`
 		EvidenceTolerance int      `json:"evidence_tolerance"`
 		TestModes         []string `json:"test_modes"`
+		ReportLanguage    string   `json:"report_language"`
 	}{
 		BaseURL:           cfg.BaseURL,
 		Model:             cfg.Model,
@@ -66,6 +67,7 @@ func ConfigSignature(cfg config.Config) string {
 		AnchorCount:       cfg.AnchorCount,
 		EvidenceTolerance: cfg.EvidenceTolerance,
 		TestModes:         append([]string(nil), cfg.TestModes...),
+		ReportLanguage:    cfg.ReportLanguage,
 	}
 	data, _ := json.Marshal(snapshot)
 	digest := sha256.Sum256(data)

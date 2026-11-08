@@ -121,10 +121,7 @@ func main() {
 	if len(deleted) > 0 {
 		fmt.Printf("Cleaned generated test files: %s\n", strings.Join(deleted, ", "))
 	}
-	fmt.Printf("Finished. Results:\n  English: %s\n  Chinese: %s\n",
-		filepath.Join(runRoot, "RESULTS.md"),
-		filepath.Join(runRoot, "RESULTS.zh-CN.md"),
-	)
+	fmt.Printf("Finished. Results: %s\n", filepath.Join(runRoot, "RESULTS.md"))
 }
 
 func fatal(format string, values ...any) {

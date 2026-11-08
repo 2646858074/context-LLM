@@ -503,6 +503,7 @@ func PublicConfig(cfg config.Config) map[string]any {
 		"anchor_count":        cfg.AnchorCount,
 		"evidence_tolerance":  cfg.EvidenceTolerance,
 		"test_modes":          cfg.TestModes,
+		"report_language":     cfg.ReportLanguage,
 	}
 }
 
@@ -625,10 +626,11 @@ func WriteSummary(runRoot string, cfg config.Config, trials []runner.Trial) erro
 	if err := WriteJSON(filepath.Join(runRoot, "tier_summary.json"), Aggregate(trials)); err != nil {
 		return err
 	}
-	if err := WriteText(filepath.Join(runRoot, "RESULTS.md"), Markdown(cfg, trials, runRoot)); err != nil {
-		return err
+	content := Markdown(cfg, trials, runRoot)
+	if cfg.ReportLanguage == "cn" {
+		content = MarkdownChinese(cfg, trials, runRoot)
 	}
-	return WriteText(filepath.Join(runRoot, "RESULTS.zh-CN.md"), MarkdownChinese(cfg, trials, runRoot))
+	return WriteText(filepath.Join(runRoot, "RESULTS.md"), content)
 }
 
 func WriteText(path, text string) error {

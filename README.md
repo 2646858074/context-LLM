@@ -103,6 +103,7 @@ tiers = 20K, 1.1M, 2M
 | `anchor_count` | `13` | 总题目数，范围 13-50 |
 | `evidence_tolerance` | `0` | 每种题型允许的证据错误数，建议不超过 2 |
 | `test_modes` | 四类全开 | 逗号分隔的题型开关 |
+| `report_language` | `en` | `RESULTS.md` 语言；可选 `en` 或 `cn` |
 
 可用题型：
 
@@ -165,7 +166,6 @@ Estimated usage for 200000: input 189.5K, output 2.5K, total 192.0K
 ```text
 runs/run_日期_时间/
 ├── RESULTS.md
-├── RESULTS.zh-CN.md
 ├── summary.json
 ├── tier_summary.json
 ├── run_config.public.json
@@ -174,7 +174,7 @@ runs/run_日期_时间/
 
 测试成功后会删除大型材料、私有答案和原始响应。响应正文不会重复保存，但请求 ID、模型、状态、finish reason、usage、重试和输出扩容等元数据会保留在 `summary.json` 与 checkpoint 中。
 
-`RESULTS.md` 是英文报告，`RESULTS.zh-CN.md` 是中文版本。两者都包含 `Errors` 表，直接显示失败类型、HTTP 状态、错误代码、供应商消息和重试次数。
+`RESULTS.md` 的语言由 `report_language` 控制：`en` 输出英文，`cn` 输出中文。报告包含 `Errors` 表，直接显示失败类型、HTTP 状态、错误代码、供应商消息和重试次数。
 
 `run_config.public.json` 不包含 API 密钥。
 
