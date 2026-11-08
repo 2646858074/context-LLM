@@ -53,6 +53,22 @@ api_key = 你的 API 密钥
 go run . --config ./config.txt
 ```
 
+## 报告预览
+
+打开最近一次测试报告：
+
+```sh
+./<binary> --preview latest
+```
+
+也可以指定报告文件：
+
+```sh
+./<binary> --preview path/to/RESULTS.md
+```
+
+程序只监听本机 `127.0.0.1`，会尽力自动打开浏览器。没有浏览器或图形环境时，会打印 Markdown 文件路径供直接查看；存在浏览器时按 `Ctrl+C` 停止本地预览服务。
+
 ## 配置说明
 
 配置文件使用中文行内注释，`#` 后的内容会被忽略。
@@ -103,6 +119,7 @@ tiers = 20K, 1.1M, 2M
 | `anchor_count` | `13` | 总题目数，范围 13-50 |
 | `evidence_tolerance` | `0` | 每种题型允许的证据错误数，建议不超过 2 |
 | `test_modes` | 四类全开 | 逗号分隔的题型开关 |
+| `report_language` | `en` | `RESULTS.md` 语言；可选 `en` 或 `cn` |
 
 可用题型：
 
@@ -165,7 +182,6 @@ Estimated usage for 200000: input 189.5K, output 2.5K, total 192.0K
 ```text
 runs/run_日期_时间/
 ├── RESULTS.md
-├── RESULTS.zh-CN.md
 ├── summary.json
 ├── tier_summary.json
 ├── run_config.public.json
@@ -174,7 +190,7 @@ runs/run_日期_时间/
 
 测试成功后会删除大型材料、私有答案和原始响应。响应正文不会重复保存，但请求 ID、模型、状态、finish reason、usage、重试和输出扩容等元数据会保留在 `summary.json` 与 checkpoint 中。
 
-`RESULTS.md` 是英文报告，`RESULTS.zh-CN.md` 是中文版本。两者都包含 `Errors` 表，直接显示失败类型、HTTP 状态、错误代码、供应商消息和重试次数。
+`RESULTS.md` 的语言由 `report_language` 控制：`en` 输出英文，`cn` 输出中文。报告包含 `Errors` 表，直接显示失败类型、HTTP 状态、错误代码、供应商消息和重试次数。
 
 `run_config.public.json` 不包含 API 密钥。
 
@@ -297,6 +313,8 @@ internal/provider           API 请求、响应解析与元数据
 internal/scoring            答案、证据和 JSON 修复评分
 internal/runner             测试执行、重试、校准、并发与恢复
 internal/report             统计汇总与 Markdown 报告
+internal/mdrender           受限 Markdown 转安全 HTML
+internal/preview            本地报告服务与浏览器打开
 build.sh                    跨平台构建脚本
 Makefile                    验证与构建入口
 Dockerfile                  GHCR 多架构镜像定义

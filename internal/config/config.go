@@ -35,6 +35,7 @@ type Config struct {
 	AnchorCount       int
 	EvidenceTolerance int
 	TestModes         []string
+	ReportLanguage    string
 }
 
 func DefaultPath() (string, error) {
@@ -160,6 +161,10 @@ func Load(path string, requireKey bool) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	reportLanguage := strings.ToLower(strings.TrimSpace(defaultString(bench["report_language"], "en")))
+	if reportLanguage != "en" && reportLanguage != "cn" {
+		return Config{}, errors.New("report_language must be en or cn")
+	}
 
 	return Config{
 		BaseURL:           strings.TrimRight(provider["base_url"], "/"),
@@ -181,6 +186,7 @@ func Load(path string, requireKey bool) (Config, error) {
 		AnchorCount:       anchorCount,
 		EvidenceTolerance: evidenceTolerance,
 		TestModes:         testModes,
+		ReportLanguage:    reportLanguage,
 	}, nil
 }
 
@@ -229,6 +235,7 @@ anchor_count = 13                          # 总题目数，范围 13-50
 evidence_tolerance = 0                     # 每种题型允许的证据错误数；建议不超过 2
 test_modes = needle,multi_hop,conflict,adversarial
 # 可用题型：needle / multi_hop / conflict / adversarial
+report_language = en # RESULTS.md 输出语言：en（英文）/ cn（中文）
 `)
 }
 

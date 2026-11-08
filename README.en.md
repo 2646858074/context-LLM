@@ -53,6 +53,22 @@ You can also run from source with an explicit configuration file:
 go run . --config ./config.txt
 ```
 
+## Report Preview
+
+Open the most recent report:
+
+```sh
+./<binary> --preview latest
+```
+
+Or specify a report file:
+
+```sh
+./<binary> --preview path/to/RESULTS.md
+```
+
+The preview server binds only to `127.0.0.1` and tries to open a browser automatically. Without a browser or graphical session, it prints the Markdown file path for direct viewing. When a browser opens successfully, press `Ctrl+C` to stop the local server.
+
 ## Configuration
 
 The configuration file supports Chinese inline comments. Everything after `#` is ignored.
@@ -103,6 +119,7 @@ All tiers are converted to integer tokens and validated as unique, ascending, an
 | `anchor_count` | `13` | Total questions, from 13 to 50 |
 | `evidence_tolerance` | `0` | Allowed evidence errors per mode; values above 2 are discouraged |
 | `test_modes` | All four enabled | Comma-separated question-mode switches |
+| `report_language` | `en` | Language for `RESULTS.md`; choose `en` or `cn` |
 
 Available modes:
 
@@ -165,7 +182,6 @@ Each run is stored under:
 ```text
 runs/run_date_time/
 ├── RESULTS.md
-├── RESULTS.zh-CN.md
 ├── summary.json
 ├── tier_summary.json
 ├── run_config.public.json
@@ -174,7 +190,7 @@ runs/run_date_time/
 
 After a successful run, large materials, private answers, and raw responses are deleted. Response text is not duplicated, but request ID, model, status, finish reason, usage, retries, and output-expansion metadata remain in `summary.json` and the checkpoint.
 
-`RESULTS.md` is the English report and `RESULTS.zh-CN.md` is the Chinese version. Both include an `Errors` table showing failure type, HTTP status, error code, provider message, and retry count.
+The language of `RESULTS.md` is controlled by `report_language`: `en` writes English and `cn` writes Chinese. The report includes an `Errors` table showing failure type, HTTP status, error code, provider message, and retry count.
 
 `run_config.public.json` never contains the API key.
 
@@ -290,6 +306,8 @@ internal/provider           API requests, response parsing, and metadata
 internal/scoring            Answer, evidence, and JSON repair scoring
 internal/runner             Execution, retries, calibration, concurrency, and resume
 internal/report             Statistics and Markdown reports
+internal/mdrender           Restricted Markdown to safe HTML rendering
+internal/preview            Local report server and browser launcher
 build.sh                    Cross-platform build script
 Makefile                    Verification and build entry points
 Dockerfile                  GHCR multi-architecture image definition
