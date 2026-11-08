@@ -301,7 +301,7 @@ ghcr.io/recaeent/context-llm
 Pull the current version:
 
 ```sh
-docker pull ghcr.io/recaeent/context-llm:1.2.5
+docker pull ghcr.io/recaeent/context-llm:v1.2.5
 ```
 
 Run it with a prepared configuration:
@@ -309,7 +309,7 @@ Run it with a prepared configuration:
 ```sh
 docker run --rm \
   -v "$PWD/config.txt:/app/config.txt:ro" \
-  ghcr.io/recaeent/context-llm:1.2.5
+  ghcr.io/recaeent/context-llm:v1.2.5
 ```
 
 Pushing a `v*` tag automatically builds `linux/amd64` and `linux/arm64` images and publishes both `v*` and `latest` tags.

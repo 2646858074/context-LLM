@@ -307,7 +307,7 @@ ghcr.io/recaeent/context-llm
 拉取当前版本：
 
 ```sh
-docker pull ghcr.io/recaeent/context-llm:1.2.5
+docker pull ghcr.io/recaeent/context-llm:v1.2.5
 ```
 
 使用已准备好的配置运行：
@@ -315,7 +315,7 @@ docker pull ghcr.io/recaeent/context-llm:1.2.5
 ```sh
 docker run --rm \
   -v "$PWD/config.txt:/app/config.txt:ro" \
-  ghcr.io/recaeent/context-llm:1.2.5
+  ghcr.io/recaeent/context-llm:v1.2.5
 ```
 
 推送 `v*` 标签后，workflow 会自动构建 `linux/amd64` 和 `linux/arm64` 镜像，并发布 `v*` 与 `latest` 标签。
