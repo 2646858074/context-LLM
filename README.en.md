@@ -13,7 +13,8 @@ Key capabilities:
 - Normal and enhanced automated testing modes
 - Automatic token calibration, output-headroom expansion, and error retries
 - Per-mode scoring, repeated-run statistics, and complete response metadata
-- Resume support, concurrent execution, and global request throttling
+- Trial-level resume support, concurrent execution, and global request throttling
+- Local Markdown preview, automatic browser opening, and a five-minute timeout
 - Cross-platform builds for macOS, Windows, and Linux on x64/ARM64
 
 ## Quick Start
@@ -83,7 +84,7 @@ Set `preview_after_run = true` to enter the same preview flow automatically afte
 
 ## Configuration
 
-The configuration file supports Chinese inline comments. Everything after `#` is ignored.
+The configuration file supports Chinese comments: full-line comments start with `#`, and everything after a trailing `#` is also ignored.
 
 ### Provider
 

@@ -236,17 +236,17 @@ tiers              = 200K, 400K, 600K, 800K, 1M
 chars_per_token    = 6.25   # 初始输入估算，后续按实际用量校准
 max_output_tokens  = 2500   # 最小输出预算，会按锚点数自动扩展
 timeout_seconds    = 900    # 单次请求超时时间，单位：秒
-transport_retries  = 1      # 可恢复错误的额外重试次数
+transport_retries  = 1      # 网络、429、5xx 等可恢复错误的额外重试次数
 
 # ============================================================
 # 自动测试
 # ============================================================
-auto_calibrate       = true  # 按实际输入 token 校准后续档位
-enhanced_auto_test   = false # true：每档三次、中位数校准、自动二分
+auto_calibrate          = true  # 按实际输入 token 校准后续档位
+enhanced_auto_test      = false # true：每档三次、中位数校准、自动二分
 binary_precision_tokens = 10000 # 二分搜索精度，单位：token
-structured_output    = true  # 优先启用 JSON 结构约束
-parallel_tests       = false # true：并行执行增强模式的三次测试
-request_interval_ms  = 0     # 全局请求间隔；0 表示不限速
+structured_output       = true  # JSON 约束；供应商不支持时自动降级
+parallel_tests          = false # true：并行执行增强模式的三次测试
+request_interval_ms     = 0     # 全局请求间隔；0 表示不限速
 
 # ============================================================
 # 题目与评分
@@ -263,7 +263,7 @@ test_modes           = needle,multi_hop,conflict,adversarial
 # RESULTS.md 输出语言：en（英文）或 cn（中文）
 report_language      = en
 
-# 测试完成后自动打开 RESULTS.md 预览
+# 测试完成后自动打开 RESULTS.md 预览；浏览器打开后最多运行 5 分钟
 preview_after_run    = false
 `)
 }

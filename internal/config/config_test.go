@@ -165,7 +165,7 @@ func TestChineseEnhancedAutoTestAlias(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	updated := strings.Replace(string(data), "enhanced_auto_test   = false", "增强的自动测试 = true", 1)
+	updated := strings.Replace(string(data), "enhanced_auto_test      = false", "增强的自动测试 = true", 1)
 	if err := os.WriteFile(path, []byte(updated), 0o600); err != nil {
 		t.Fatal(err)
 	}
