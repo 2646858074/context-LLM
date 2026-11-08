@@ -18,20 +18,20 @@ api_key = 你的 API 密钥
 
 ```sh
 cd /Users/reca/Desktop/CODE/context-LLM
-./dist/context-LLM_macos_amd64
+./dist/context_llm_macos_x86_64
 ```
 
 也可编译成独立程序：
 
 ```sh
-go build -o dist/context-LLM_macos_amd64 .
-./dist/context-LLM_macos_amd64
+go build -o dist/context_llm_macos_x86_64 .
+./dist/context_llm_macos_x86_64
 ```
 
 配置检查但不发请求：
 
 ```sh
-./dist/context-LLM_macos_amd64 --dry-run
+./dist/context_llm_macos_x86_64 --dry-run
 ```
 
 ## 自动流程
