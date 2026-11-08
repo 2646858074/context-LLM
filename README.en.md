@@ -53,6 +53,22 @@ You can also run from source with an explicit configuration file:
 go run . --config ./config.txt
 ```
 
+## Report Preview
+
+Open the most recent report:
+
+```sh
+./<binary> --preview latest
+```
+
+Or specify a report file:
+
+```sh
+./<binary> --preview path/to/RESULTS.md
+```
+
+The preview server binds only to `127.0.0.1` and tries to open a browser automatically. Without a browser or graphical session, it prints the Markdown file path for direct viewing. When a browser opens successfully, press `Ctrl+C` to stop the local server.
+
 ## Configuration
 
 The configuration file supports Chinese inline comments. Everything after `#` is ignored.
@@ -290,6 +306,8 @@ internal/provider           API requests, response parsing, and metadata
 internal/scoring            Answer, evidence, and JSON repair scoring
 internal/runner             Execution, retries, calibration, concurrency, and resume
 internal/report             Statistics and Markdown reports
+internal/mdrender           Restricted Markdown to safe HTML rendering
+internal/preview            Local report server and browser launcher
 build.sh                    Cross-platform build script
 Makefile                    Verification and build entry points
 Dockerfile                  GHCR multi-architecture image definition

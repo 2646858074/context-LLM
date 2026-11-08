@@ -53,6 +53,22 @@ api_key = 你的 API 密钥
 go run . --config ./config.txt
 ```
 
+## 报告预览
+
+打开最近一次测试报告：
+
+```sh
+./<binary> --preview latest
+```
+
+也可以指定报告文件：
+
+```sh
+./<binary> --preview path/to/RESULTS.md
+```
+
+程序只监听本机 `127.0.0.1`，会尽力自动打开浏览器。没有浏览器或图形环境时，会打印 Markdown 文件路径供直接查看；存在浏览器时按 `Ctrl+C` 停止本地预览服务。
+
 ## 配置说明
 
 配置文件使用中文行内注释，`#` 后的内容会被忽略。
@@ -297,6 +313,8 @@ internal/provider           API 请求、响应解析与元数据
 internal/scoring            答案、证据和 JSON 修复评分
 internal/runner             测试执行、重试、校准、并发与恢复
 internal/report             统计汇总与 Markdown 报告
+internal/mdrender           受限 Markdown 转安全 HTML
+internal/preview            本地报告服务与浏览器打开
 build.sh                    跨平台构建脚本
 Makefile                    验证与构建入口
 Dockerfile                  GHCR 多架构镜像定义
