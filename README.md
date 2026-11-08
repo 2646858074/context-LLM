@@ -255,6 +255,10 @@ make build-all
 - 真实密钥不会写入公开配置、checkpoint、Markdown 报告或原始结果。
 - 如果配置文件中保存了真实密钥，启动时会提示不要分享该文件。
 
+## License
+
+本项目使用 [The Unlicense](LICENSE)，将软件放入公共领域，允许任何人自由使用、修改和再发布。
+
 
 ## 项目结构
 
