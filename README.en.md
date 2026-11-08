@@ -53,6 +53,16 @@ You can also run from source with an explicit configuration file:
 go run . --config ./config.txt
 ```
 
+Quick command reference:
+
+| Purpose | Command |
+|---|---|
+| Validate configuration | `./<binary> --dry-run` |
+| Run the benchmark | `./<binary>` |
+| Open the latest report | `./<binary> --preview latest` |
+| Resume an interrupted run | `./<binary> --resume latest` |
+| Run full verification | `make verify` |
+
 ## Report Preview
 
 Open the most recent report:
@@ -121,8 +131,6 @@ All tiers are converted to integer tokens and validated as unique, ascending, an
 | `anchor_count` | `13` | Total questions, from 13 to 50 |
 | `evidence_tolerance` | `0` | Allowed evidence errors per mode; values above 2 are discouraged |
 | `test_modes` | All four enabled | Comma-separated question-mode switches |
-| `report_language` | `en` | Language for `RESULTS.md`; choose `en` or `cn` |
-| `preview_after_run` | `false` | Automatically open the report preview after a run |
 
 Available modes:
 
@@ -134,6 +142,13 @@ Available modes:
 | `adversarial` | Resisting similar incorrect information |
 
 An abstention question for insufficient material is always included.
+
+### Output And Preview
+
+| Setting | Default | Description |
+|---|---|---|
+| `report_language` | `en` | Language for `RESULTS.md`; choose `en` or `cn` |
+| `preview_after_run` | `false` | Automatically open the report preview after a run |
 
 ## Test Flow
 

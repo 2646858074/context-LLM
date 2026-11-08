@@ -53,6 +53,16 @@ api_key = 你的 API 密钥
 go run . --config ./config.txt
 ```
 
+常用命令速查：
+
+| 目的 | 命令 |
+|---|---|
+| 检查配置 | `./<binary> --dry-run` |
+| 运行测试 | `./<binary>` |
+| 打开最新报告 | `./<binary> --preview latest` |
+| 恢复中断测试 | `./<binary> --resume latest` |
+| 完整验证 | `make verify` |
+
 ## 报告预览
 
 打开最近一次测试报告：
@@ -121,8 +131,6 @@ tiers = 20K, 1.1M, 2M
 | `anchor_count` | `13` | 总题目数，范围 13-50 |
 | `evidence_tolerance` | `0` | 每种题型允许的证据错误数，建议不超过 2 |
 | `test_modes` | 四类全开 | 逗号分隔的题型开关 |
-| `report_language` | `en` | `RESULTS.md` 语言；可选 `en` 或 `cn` |
-| `preview_after_run` | `false` | 测试完成后自动打开报告预览 |
 
 可用题型：
 
@@ -134,6 +142,13 @@ tiers = 20K, 1.1M, 2M
 | `adversarial` | 相似错误信息干扰 |
 
 无论启用哪些题型，都会保留一题“材料不足”拒答题。
+
+### 输出与预览
+
+| 配置 | 默认值 | 说明 |
+|---|---|---|
+| `report_language` | `en` | `RESULTS.md` 语言；可选 `en` 或 `cn` |
+| `preview_after_run` | `false` | 测试完成后自动打开报告预览 |
 
 ## 测试流程
 
