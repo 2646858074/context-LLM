@@ -77,7 +77,7 @@ Or specify a report file:
 ./<binary> --preview path/to/RESULTS.md
 ```
 
-The preview server binds only to `127.0.0.1` and tries to open a browser automatically. Without a browser or graphical session, it prints the Markdown file path for direct viewing. When a browser opens successfully, press `Ctrl+C` to stop the local server.
+The preview server binds only to `127.0.0.1` and tries to open a browser automatically. Without a browser or graphical session, it prints the Markdown file path for direct viewing. When a browser opens, press `Ctrl+C` to stop early; otherwise the server closes automatically after five minutes.
 
 Set `preview_after_run = true` to enter the same preview flow automatically after a normal test run.
 

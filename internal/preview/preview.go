@@ -18,6 +18,8 @@ import (
 	"context-LLM/internal/mdrender"
 )
 
+const previewLifetime = 5 * time.Minute
+
 func Resolve(target, configPath string) (string, error) {
 	if strings.TrimSpace(target) == "" {
 		return "", errors.New("preview target is required")
@@ -98,15 +100,46 @@ func Run(path string) error {
 	}
 
 	fmt.Printf("Report opened in your browser: %s\n", reportURL)
-	fmt.Println("Press Ctrl+C to stop the local report server.")
+	fmt.Printf("Press Ctrl+C to stop, or the server will close automatically after %s.\n", previewLifetime)
 
 	signalContext, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	select {
-	case <-signalContext.Done():
-		return shutdown(server)
-	case err := <-serverError:
+	result, err := waitForPreview(signalContext.Done(), serverError, previewLifetime)
+	if err != nil {
 		return err
+	}
+	switch result {
+	case previewWaitTimedOut:
+		if err := shutdown(server); err != nil {
+			return err
+		}
+		fmt.Printf("Preview stopped after %s: %s\n", previewLifetime, absolutePath)
+		return nil
+	case previewWaitServerFailed:
+		return errors.New("local preview server failed")
+	default:
+		return shutdown(server)
+	}
+}
+
+type previewWaitResult int
+
+const (
+	previewWaitStopped previewWaitResult = iota
+	previewWaitTimedOut
+	previewWaitServerFailed
+)
+
+func waitForPreview(done <-chan struct{}, serverError <-chan error, timeout time.Duration) (previewWaitResult, error) {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return previewWaitStopped, nil
+	case <-timer.C:
+		return previewWaitTimedOut, nil
+	case err := <-serverError:
+		return previewWaitServerFailed, err
 	}
 }
 

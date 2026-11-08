@@ -1,12 +1,14 @@
 package preview
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestResolveLatestReport(t *testing.T) {
@@ -38,5 +40,26 @@ func TestReportHandlerSecurityHeaders(t *testing.T) {
 	}
 	if !strings.Contains(recorder.Header().Get("Content-Security-Policy"), "default-src 'none'") {
 		t.Fatal("missing CSP header")
+	}
+}
+
+func TestWaitForPreviewLifecycle(t *testing.T) {
+	done := make(chan struct{})
+	serverError := make(chan error, 1)
+	result, err := waitForPreview(done, serverError, 10*time.Millisecond)
+	if err != nil || result != previewWaitTimedOut {
+		t.Fatalf("unexpected timeout result: %v, %v", result, err)
+	}
+
+	close(done)
+	result, err = waitForPreview(done, serverError, time.Second)
+	if err != nil || result != previewWaitStopped {
+		t.Fatalf("unexpected stop result: %v, %v", result, err)
+	}
+
+	serverError <- errors.New("server failed")
+	result, err = waitForPreview(make(chan struct{}), serverError, time.Second)
+	if err == nil || result != previewWaitServerFailed {
+		t.Fatalf("unexpected server failure result: %v, %v", result, err)
 	}
 }
