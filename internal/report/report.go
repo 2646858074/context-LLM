@@ -183,6 +183,191 @@ func Markdown(cfg config.Config, trials []runner.Trial, root string) string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
+func MarkdownChinese(cfg config.Config, trials []runner.Trial, root string) string {
+	lines := []string{
+		"# 长上下文测试结果",
+		"",
+		"- 服务商：`" + cfg.BaseURL + "`",
+		"- 模型：`" + cfg.Model + "`",
+		"- 运行目录：`" + filepath.Base(root) + "`",
+		"- 测试题型：`" + strings.Join(cfg.TestModes, ",") + "`",
+		"- 证据宽容度：`" + strconv.Itoa(cfg.EvidenceTolerance) + "`（所有答案仍必须正确）。",
+		"- 响应元数据已保存到 `summary.json` 和 checkpoint，不包含消息正文。",
+		"- 公开配置和报告不包含 API 密钥。",
+	}
+	for i := len(trials) - 1; i >= 0; i-- {
+		if calibration := calibrationForTrial(cfg, trials, trials[i]); calibration != nil {
+			lines = append(lines, fmt.Sprintf("- 下次运行建议 `chars_per_token`：`%.4f`（基于 %d 次测试的中位数）。", calibration.RecommendedCharsPerToken, len(trialsForTier(trials, trials[i].Tier))))
+			break
+		}
+	}
+
+	stats := Aggregate(trials)
+	lines = append(lines, "", "## 档位汇总", "", "| 档位 | 状态 | 测试数 | 通过 | 通过率 | 上下限 | 失败 | 输入均值 | 输入中位数 | 输入范围 | 输入总量 | 输出均值 | 输出总量 | 总量均值 | 平均耗时 |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|")
+	for _, stat := range stats {
+		inputAverage, inputMedian, inputRange := "—", "—", "—"
+		if stat.PromptTokensSamples > 0 {
+			inputAverage = formatK(int(stat.PromptTokensAverage))
+			inputMedian = formatK(stat.PromptTokensMedian)
+			inputRange = fmt.Sprintf("%s–%s", formatK(stat.PromptTokensMin), formatK(stat.PromptTokensMax))
+		}
+		outputAverage, inputTotal, outputTotal, totalAverage := "—", "—", "—", "—"
+		if stat.CompletionTokensSamples > 0 {
+			outputAverage = formatK(int(stat.CompletionTokensAverage))
+		}
+		if stat.PromptTokensTotal > 0 {
+			inputTotal = formatK(stat.PromptTokensTotal)
+		}
+		if stat.CompletionTokensTotal > 0 {
+			outputTotal = formatK(stat.CompletionTokensTotal)
+		}
+		if stat.TotalTokensSamples > 0 {
+			totalAverage = formatK(int(stat.TotalTokensAverage))
+		}
+		lines = append(lines, fmt.Sprintf(
+			"| %s | %s | %d | %d | %.1f%% | %d | %d | %s | %s | %s | %s | %s | %s | %s | %.2fs |",
+			comma(stat.Tier),
+			chineseTierStatus(stat.Status),
+			stat.Trials,
+			stat.Passed,
+			stat.PassRatePercent,
+			stat.ContextLimits,
+			stat.Failed,
+			inputAverage,
+			inputMedian,
+			inputRange,
+			inputTotal,
+			outputAverage,
+			outputTotal,
+			totalAverage,
+			stat.ElapsedSecondsAverage,
+		))
+	}
+
+	lines = append(lines, "", "## 错误", "", "| 档位 | 测试 | 类型 | HTTP | 尝试次数 | 错误代码 | 错误消息 |", "|---:|---|---|---:|---:|---|---|")
+	errorRows := 0
+	for _, trial := range trials {
+		if trial.Score.State == "passed" && !trial.ContextTooLarge {
+			continue
+		}
+		detail := errorDetail(trial)
+		errorRows++
+		lines = append(lines, fmt.Sprintf(
+			"| %s | %s | %s | %s | %d | %s | %s |",
+			comma(trial.Tier),
+			trial.Label,
+			chineseErrorKind(errorKind(trial)),
+			errorHTTPStatus(trial),
+			trial.Attempts,
+			sanitizeCell(detail.Code),
+			sanitizeCell(detail.Message),
+		))
+	}
+	if errorRows == 0 {
+		lines = append(lines, "| — | — | 无 | — | 0 | — | 未检测到失败。 |")
+	}
+
+	lines = append(lines, "", "## 单次测试结果", "", "| 档位 | 测试 | CPT | 实际输入 | 实际输出 | 实际总量 | 建议 CPT | 输出上限 | 结果 | 得分 |", "|---:|---|---:|---:|---:|---:|---:|---:|---|---|")
+	for _, trial := range trials {
+		actual, recommended := "—", "—"
+		actualOutput, actualTotal := "—", "—"
+		if trial.PromptTokens != nil {
+			actual = formatK(*trial.PromptTokens)
+		}
+		if trial.CompletionTokens != nil {
+			actualOutput = formatK(*trial.CompletionTokens)
+		}
+		if trial.PromptTokens != nil && trial.CompletionTokens != nil {
+			actualTotal = formatK(*trial.PromptTokens + *trial.CompletionTokens)
+		}
+		if calibration := calibrationForTrial(cfg, trials, trial); calibration != nil {
+			recommended = fmt.Sprintf("%.4f", calibration.RecommendedCharsPerToken)
+		}
+		outputLimit := "—"
+		if trial.MaxOutputTokensUsed > 0 {
+			outputLimit = comma(trial.MaxOutputTokensUsed)
+		}
+		score := fmt.Sprintf("%d/%d 答案；%d/%d 证据", trial.Score.AnswerHits, trial.Score.QuestionCount, trial.Score.EvidenceHits, trial.Score.QuestionCount)
+		if trial.Score.Repaired {
+			score += "；已修复 JSON"
+		}
+		lines = append(lines, fmt.Sprintf("| %s | %s | %.4f | %s | %s | %s | %s | %s | %s | %s |", comma(trial.Tier), trial.Label, trial.CharsPerTokenUsed, actual, actualOutput, actualTotal, recommended, outputLimit, chineseTrialResult(trial), score))
+	}
+
+	lines = append(lines, "", "## 分题型成绩", "", "| 档位 | 测试 | 题型 | 答案 | 证据 | 漏答 |", "|---:|---|---|---:|---:|---|")
+	for _, trial := range trials {
+		if len(trial.Score.ByMode) == 0 {
+			continue
+		}
+		modes := make([]string, 0, len(trial.Score.ByMode))
+		for mode := range trial.Score.ByMode {
+			modes = append(modes, mode)
+		}
+		sort.Strings(modes)
+		for _, mode := range modes {
+			modeScore := trial.Score.ByMode[mode]
+			lines = append(lines, fmt.Sprintf(
+				"| %s | %s | %s | %d/%d | %d/%d | %s |",
+				comma(trial.Tier),
+				trial.Label,
+				mode,
+				modeScore.AnswerHits,
+				modeScore.QuestionCount,
+				modeScore.EvidenceHits,
+				modeScore.QuestionCount,
+				strings.Join(modeScore.Missed, ", "),
+			))
+		}
+	}
+	return strings.Join(lines, "\n") + "\n"
+}
+
+func chineseTierStatus(status string) string {
+	switch status {
+	case "passed":
+		return "通过"
+	case "context_limit":
+		return "上下文超限"
+	case "partial":
+		return "部分完成"
+	default:
+		return status
+	}
+}
+
+func chineseErrorKind(kind string) string {
+	switch kind {
+	case "context_limit":
+		return "上下文超限"
+	case "request_failed":
+		return "请求失败"
+	case "invalid_answer_json":
+		return "JSON 无效"
+	case "scored_failure":
+		return "评分失败"
+	default:
+		return kind
+	}
+}
+
+func chineseTrialResult(trial runner.Trial) string {
+	if trial.ContextTooLarge {
+		return "上下文超限"
+	}
+	switch trial.Score.State {
+	case "passed":
+		return "通过"
+	case "request_failed":
+		return "请求失败"
+	case "invalid_answer_json":
+		return "JSON 无效"
+	case "scored_failure":
+		return "评分失败"
+	default:
+		return trial.Score.State
+	}
+}
+
 type reportErrorDetail struct {
 	Code    string
 	Message string
@@ -440,7 +625,10 @@ func WriteSummary(runRoot string, cfg config.Config, trials []runner.Trial) erro
 	if err := WriteJSON(filepath.Join(runRoot, "tier_summary.json"), Aggregate(trials)); err != nil {
 		return err
 	}
-	return WriteText(filepath.Join(runRoot, "RESULTS.md"), Markdown(cfg, trials, runRoot))
+	if err := WriteText(filepath.Join(runRoot, "RESULTS.md"), Markdown(cfg, trials, runRoot)); err != nil {
+		return err
+	}
+	return WriteText(filepath.Join(runRoot, "RESULTS.zh-CN.md"), MarkdownChinese(cfg, trials, runRoot))
 }
 
 func WriteText(path, text string) error {
