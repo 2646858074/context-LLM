@@ -193,6 +193,7 @@ func MarkdownChinese(cfg config.Config, trials []runner.Trial, root string) stri
 		"- 测试题型：`" + strings.Join(cfg.TestModes, ",") + "`",
 		"- 证据宽容度：`" + strconv.Itoa(cfg.EvidenceTolerance) + "`（所有答案仍必须正确）。",
 		"- 响应元数据已保存到 `summary.json` 和 checkpoint，不包含消息正文。",
+		"- 错误代码和常见消息已翻译；未识别的供应商消息保留英文原文。",
 		"- 公开配置和报告不包含 API 密钥。",
 	}
 	for i := len(trials) - 1; i >= 0; i-- {
@@ -259,8 +260,8 @@ func MarkdownChinese(cfg config.Config, trials []runner.Trial, root string) stri
 			chineseErrorKind(errorKind(trial)),
 			errorHTTPStatus(trial),
 			trial.Attempts,
-			sanitizeCell(detail.Code),
-			sanitizeCell(detail.Message),
+			sanitizeCell(chineseErrorCode(detail.Code)),
+			sanitizeCell(chineseErrorMessage(detail.Code, detail.Message)),
 		))
 	}
 	if errorRows == 0 {
@@ -348,6 +349,99 @@ func chineseErrorKind(kind string) string {
 	default:
 		return kind
 	}
+}
+
+func chineseErrorCode(code string) string {
+	switch strings.ToLower(code) {
+	case "request_failed":
+		return "请求失败"
+	case "invalid_answer_json":
+		return "JSON 无效"
+	case "scored_failure":
+		return "评分失败"
+	case "context_too_large", "context_length_exceeded":
+		return "上下文超长"
+	case "transport_error":
+		return "网络传输错误"
+	case "model_cooldown":
+		return "模型冷却中"
+	case "usage_limit_reached":
+		return "使用额度已用尽"
+	case "rate_limit_exceeded", "too_many_requests":
+		return "请求频率或额度受限"
+	case "authentication_error", "invalid_api_key":
+		return "API 密钥或鉴权错误"
+	case "permission_denied":
+		return "权限不足"
+	case "invalid_request_error":
+		return "请求参数错误"
+	case "model_not_found":
+		return "模型不存在"
+	case "content_policy_violation":
+		return "内容策略拦截"
+	case "server_error", "internal_server_error":
+		return "服务器内部错误"
+	case "upstream_error":
+		return "上游服务错误"
+	case "overloaded":
+		return "服务过载"
+	default:
+		return code
+	}
+}
+
+func chineseErrorMessage(code, message string) string {
+	if strings.TrimSpace(message) == "" {
+		return "未提供具体错误消息"
+	}
+	if containsChinese(message) {
+		return message
+	}
+	lower := strings.ToLower(message)
+	switch strings.ToLower(code) {
+	case "model_cooldown":
+		if strings.Contains(lower, "usage limit") || strings.Contains(lower, "cooling down") {
+			return "模型正在冷却，且使用额度已达到上限"
+		}
+		return "模型正在冷却"
+	case "usage_limit_reached":
+		return "使用额度已达到上限"
+	case "context_too_large", "context_length_exceeded":
+		return "输入超过模型上下文窗口"
+	}
+	phrases := []struct {
+		needle      string
+		translation string
+	}{
+		{"usage limit has been reached", "使用额度已达到上限"},
+		{"usage limit reached", "使用额度已达到上限"},
+		{"cooling down", "模型正在冷却"},
+		{"exceeds the context window", "输入超过模型上下文窗口"},
+		{"rate limit", "请求频率或额度受限"},
+		{"too many requests", "请求过于频繁"},
+		{"invalid api key", "API 密钥无效"},
+		{"incorrect api key", "API 密钥无效"},
+		{"permission denied", "权限不足"},
+		{"model not found", "模型不存在"},
+		{"content policy", "内容策略拦截"},
+		{"server error", "服务器内部错误"},
+		{"overloaded", "服务过载"},
+	}
+	for _, phrase := range phrases {
+		if strings.Contains(lower, phrase.needle) {
+			return phrase.translation
+		}
+	}
+	return "未识别的英文消息：" + message
+}
+
+func containsChinese(value string) bool {
+	for _, character := range value {
+		if character >= 0x4e00 && character <= 0x9fff {
+			return true
+		}
+	}
+	return false
 }
 
 func chineseTrialResult(trial runner.Trial) string {

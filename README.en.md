@@ -210,6 +210,8 @@ After a successful run, large materials, private answers, and raw responses are 
 
 The language of `RESULTS.md` is controlled by `report_language`: `en` writes English and `cn` writes Chinese. The report includes an `Errors` table showing failure type, HTTP status, error code, provider message, and retry count.
 
+The Chinese report translates common error codes and provider messages. Unrecognized English messages are preserved, while the complete raw error remains in `summary.json`.
+
 `run_config.public.json` never contains the API key.
 
 ## Resume

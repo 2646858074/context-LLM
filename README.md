@@ -210,6 +210,8 @@ runs/run_日期_时间/
 
 `RESULTS.md` 的语言由 `report_language` 控制：`en` 输出英文，`cn` 输出中文。报告包含 `Errors` 表，直接显示失败类型、HTTP 状态、错误代码、供应商消息和重试次数。
 
+中文报告会翻译常见错误代码和常见供应商提示；无法可靠识别的英文消息会保留原文，完整原始错误仍保存在 `summary.json`。
+
 `run_config.public.json` 不包含 API 密钥。
 
 ## 断点续跑
