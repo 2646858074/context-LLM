@@ -134,7 +134,14 @@ func main() {
 	if len(deleted) > 0 {
 		fmt.Printf("Cleaned generated test files: %s\n", strings.Join(deleted, ", "))
 	}
-	fmt.Printf("Finished. Results: %s\n", filepath.Join(runRoot, "RESULTS.md"))
+	resultsPath := filepath.Join(runRoot, "RESULTS.md")
+	fmt.Printf("Finished. Results: %s\n", resultsPath)
+	if cfg.PreviewAfterRun {
+		fmt.Println("Auto-preview is enabled.")
+		if err := preview.Run(resultsPath); err != nil {
+			fatal("preview report: %v", err)
+		}
+	}
 }
 
 func fatal(format string, values ...any) {

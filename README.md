@@ -69,6 +69,8 @@ go run . --config ./config.txt
 
 程序只监听本机 `127.0.0.1`，会尽力自动打开浏览器。没有浏览器或图形环境时，会打印 Markdown 文件路径供直接查看；存在浏览器时按 `Ctrl+C` 停止本地预览服务。
 
+将 `preview_after_run = true` 写入配置后，正常测试结束时也会自动进入该预览流程。
+
 ## 配置说明
 
 配置文件使用中文行内注释，`#` 后的内容会被忽略。
@@ -120,6 +122,7 @@ tiers = 20K, 1.1M, 2M
 | `evidence_tolerance` | `0` | 每种题型允许的证据错误数，建议不超过 2 |
 | `test_modes` | 四类全开 | 逗号分隔的题型开关 |
 | `report_language` | `en` | `RESULTS.md` 语言；可选 `en` 或 `cn` |
+| `preview_after_run` | `false` | 测试完成后自动打开报告预览 |
 
 可用题型：
 

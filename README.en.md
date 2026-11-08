@@ -69,6 +69,8 @@ Or specify a report file:
 
 The preview server binds only to `127.0.0.1` and tries to open a browser automatically. Without a browser or graphical session, it prints the Markdown file path for direct viewing. When a browser opens successfully, press `Ctrl+C` to stop the local server.
 
+Set `preview_after_run = true` to enter the same preview flow automatically after a normal test run.
+
 ## Configuration
 
 The configuration file supports Chinese inline comments. Everything after `#` is ignored.
@@ -120,6 +122,7 @@ All tiers are converted to integer tokens and validated as unique, ascending, an
 | `evidence_tolerance` | `0` | Allowed evidence errors per mode; values above 2 are discouraged |
 | `test_modes` | All four enabled | Comma-separated question-mode switches |
 | `report_language` | `en` | Language for `RESULTS.md`; choose `en` or `cn` |
+| `preview_after_run` | `false` | Automatically open the report preview after a run |
 
 Available modes:
 

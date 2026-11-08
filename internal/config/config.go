@@ -36,6 +36,7 @@ type Config struct {
 	EvidenceTolerance int
 	TestModes         []string
 	ReportLanguage    string
+	PreviewAfterRun   bool
 }
 
 func DefaultPath() (string, error) {
@@ -165,6 +166,10 @@ func Load(path string, requireKey bool) (Config, error) {
 	if reportLanguage != "en" && reportLanguage != "cn" {
 		return Config{}, errors.New("report_language must be en or cn")
 	}
+	previewAfterRun, err := strconv.ParseBool(defaultString(bench["preview_after_run"], "false"))
+	if err != nil {
+		return Config{}, errors.New("preview_after_run must be true or false")
+	}
 
 	return Config{
 		BaseURL:           strings.TrimRight(provider["base_url"], "/"),
@@ -187,6 +192,7 @@ func Load(path string, requireKey bool) (Config, error) {
 		EvidenceTolerance: evidenceTolerance,
 		TestModes:         testModes,
 		ReportLanguage:    reportLanguage,
+		PreviewAfterRun:   previewAfterRun,
 	}, nil
 }
 
@@ -236,6 +242,7 @@ evidence_tolerance = 0                     # 每种题型允许的证据错误�
 test_modes = needle,multi_hop,conflict,adversarial
 # 可用题型：needle / multi_hop / conflict / adversarial
 report_language = en # RESULTS.md 输出语言：en（英文）/ cn（中文）
+preview_after_run = false # 测试完成后自动打开 RESULTS.md 预览；默认关闭
 `)
 }
 

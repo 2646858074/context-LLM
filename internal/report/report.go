@@ -504,6 +504,7 @@ func PublicConfig(cfg config.Config) map[string]any {
 		"evidence_tolerance":  cfg.EvidenceTolerance,
 		"test_modes":          cfg.TestModes,
 		"report_language":     cfg.ReportLanguage,
+		"preview_after_run":   cfg.PreviewAfterRun,
 	}
 }
 
